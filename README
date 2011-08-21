@@ -1,0 +1,10 @@
+RudimentaryPhpTest is a very simple framework for running PHP unit tests.
+
+Tests can be stored in any nested folder or a single file. The framework traverses the folder to file PHP files. If those define classes inheriting from BaseTest they are seen as test classes. All methods matching a filter expression are executed as tests – the default is to execute all methods whose name ends in “Test”.
+
+After the test runs complete a simple table is printed to the console which lists the tests and their assertions.
+
+So far, this framework was developed and tested on PHP 5.3 running on Linux. It should run on any PHP 5 in theory, though.
+
+Invocation is as follows where the parameter testfilter is optional and testbase gives the root file or directory with tests to execute:
+php -f RudimentaryPhpTest.php -- --testbase='samples' [ --testfilter='Test$' ]
