@@ -8,3 +8,8 @@ So far, this framework was developed and tested on PHP 5.3 running on Linux. It 
 
 Invocation is as follows where the parameter testfilter is optional and testbase gives the root file or directory with tests to execute:
 php -f RudimentaryPhpTest.php -- --testbase='samples' [ --testfilter='Test$' ]
+
+Exit codes are as follows:
+0: All tests succeeded (see console output for summary)
+1: At least one assertion failed (see console output for exceptions and summary)
+255: PHP failed to parse a test / Test execution was aborted (see console output for exceptions)

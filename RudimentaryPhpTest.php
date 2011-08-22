@@ -46,6 +46,9 @@ class RudimentaryPhpTest {
 		
 		// Print table with test results
 		$this->printSummary();
+		
+		// Fail with error code when an assertion failed
+		$this->performExit();
 	}
 	
 	/**
@@ -209,11 +212,29 @@ class RudimentaryPhpTest {
 			return array();
 		}
 	}
+	
+	/**
+	 * Kills the test runner script to be able to set an exit code
+	 */
+	private function performExit(){
+		// Add line break so console is never messed up
+		echo PHP_EOL;
+		
+		// See if there are any failed assertions
+		foreach($this->assertions as $assertions){
+			foreach($assertions as $assertion){
+				if($assertion['failed']>0){
+					// End with error code
+					exit(1);
+				}
+			}
+		}
+		// End with success code
+		exit(0);
+	}
 }
 
 // Print usage information
 echo 'Usage: php -f RudimentaryPhpTest.php -- --testbase=\'samples\' [ --testfilter=\'Test$\' ]'.PHP_EOL;
 // Run tests
 new RudimentaryPhpTest();
-// Add line break so console is never messed up
-echo PHP_EOL;
