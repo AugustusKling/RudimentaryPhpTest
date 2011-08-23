@@ -6,6 +6,9 @@ ini_set('display_errors', '1');
 mb_internal_encoding("UTF-8");
 mb_regex_encoding("UTF-8");
 
+// Load own dependencies
+require_once('BaseTest.php');
+
 /**
  * Parses command line arguments and runs tests when instantiated
  */
@@ -24,9 +27,14 @@ class RudimentaryPhpTest {
 	private $assertions = array();
 	
 	/**
-	 * Construct object and run tests. Running is invoked here to prevent another global variable
+	 * Test runner must only be instatiated by static function performTestsAndExit
 	 */
-	public function __construct(){
+	private function __construct(){}
+	
+	/**
+	 * Loads tests, executes tests, prints summary and exits
+	 */
+	public static function performTestsAndExit(){
 		// Parse command line arguments
 		$optionDefaults = array(
 			self::OPTION_TESTBASE.':' => NULL,
@@ -37,18 +45,18 @@ class RudimentaryPhpTest {
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
 		
-		// Load own dependencies
-		require_once('BaseTest.php');
+		// Create test runner instance
+		$testRunner = new self();
 		
 		// Execute tests
-		$this->loadTests($options[self::OPTION_TESTBASE]);
-		$this->runTests(isset($options[self::OPTION_TESTFILTER])?$options[self::OPTION_TESTFILTER]:$optionDefaults[self::OPTION_TESTFILTER.':']);
+		$testRunner->loadTests($options[self::OPTION_TESTBASE]);
+		$testRunner->runTests(isset($options[self::OPTION_TESTFILTER])?$options[self::OPTION_TESTFILTER]:$optionDefaults[self::OPTION_TESTFILTER.':']);
 		
 		// Print table with test results
-		$this->printSummary();
+		$testRunner->printSummary();
 		
 		// Fail with error code when an assertion failed
-		$this->performExit();
+		$testRunner->performExit();
 	}
 	
 	/**
@@ -239,4 +247,4 @@ class RudimentaryPhpTest {
 // Print usage information
 echo 'Usage: php -f RudimentaryPhpTest.php -- --testbase=\'samples\' [ --testfilter=\'Test$\' ]'.PHP_EOL;
 // Run tests
-new RudimentaryPhpTest();
+RudimentaryPhpTest::performTestsAndExit();
