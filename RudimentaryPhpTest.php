@@ -67,7 +67,7 @@ class RudimentaryPhpTest {
 				break;
 			case 'dir':
 				// Walk directory recursively and load all test classes
-				$dirIterator = new RecursiveDirectoryIterator($testbase);
+				$dirIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($testbase));
 				foreach($dirIterator as $path => $info){
 					// Assume all PHP files in the given directory are tests
 					if(pathinfo($info->getFileName(), PATHINFO_EXTENSION)==='php'){
@@ -132,6 +132,8 @@ class RudimentaryPhpTest {
 					if(!isset($expectedExceptions[get_class($e)])){
 						// Print all exceptions to console that are not expected to happen. Rethrowing breaks stack-trace unfortunately.
 						echo $e;
+						// Record the unexpected exception as failure
+						$this->assertionFailed($className, $methodName);
 					} else {
 						// Record catch
 						$expectedExceptions[get_class($e)] += 1;
