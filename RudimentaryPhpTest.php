@@ -15,6 +15,7 @@ require_once('BaseTest.php');
 class RudimentaryPhpTest {
 	const OPTION_TESTBASE = 'testbase';
 	const OPTION_TESTFILTER = 'testfilter';
+	const OPTION_BOOTSTRAP = 'bootstrap';
 	
 	/**
 	 * @var string Delimiter for test summary
@@ -38,7 +39,8 @@ class RudimentaryPhpTest {
 		// Parse command line arguments
 		$optionDefaults = array(
 			self::OPTION_TESTBASE.':' => NULL,
-			self::OPTION_TESTFILTER.':' => 'Test$'
+			self::OPTION_TESTFILTER.':' => 'Test$',
+			self::OPTION_BOOTSTRAP.':' => NULL
 		);
 		$options = getopt('', array_keys($optionDefaults));
 		if(!isset($options[self::OPTION_TESTBASE])){
@@ -47,6 +49,9 @@ class RudimentaryPhpTest {
 		
 		// Create test runner instance
 		$testRunner = new self();
+		
+		// Prepare environment for tests
+		$testRunner->bootstrap(isset($options[self::OPTION_BOOTSTRAP])?$options[self::OPTION_BOOTSTRAP]:NULL);
 		
 		// Execute tests
 		$testRunner->loadTests($options[self::OPTION_TESTBASE]);
@@ -57,6 +62,16 @@ class RudimentaryPhpTest {
 		
 		// Fail with error code when an assertion failed
 		$testRunner->performExit();
+	}
+	
+	private function bootstrap($file){
+		if($file===NULL){
+			return;
+		}
+		if(!file_exists($file)){
+			throw new Exception('Could not read bootstrap file');
+		}
+		require_once $file;
 	}
 	
 	/**
@@ -245,6 +260,6 @@ class RudimentaryPhpTest {
 }
 
 // Print usage information
-echo 'Usage: php -f RudimentaryPhpTest.php -- --testbase=\'samples\' [ --testfilter=\'Test$\' ]'.PHP_EOL;
+echo 'Usage: php -f RudimentaryPhpTest.php -- --testbase=\'samples\' [ --testfilter=\'Test$\' ] [ --bootstrap=\'….php\' ]'.PHP_EOL;
 // Run tests
 RudimentaryPhpTest::performTestsAndExit();
