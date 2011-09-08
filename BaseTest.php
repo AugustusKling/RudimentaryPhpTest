@@ -82,7 +82,14 @@ abstract class BaseTest {
 	 */
 	private function getCallerFunction(){
 		$trace = debug_backtrace();
-		$caller = $trace[2];
-		return $caller['function'];
+		$lastFunctionName = NULL;
+		foreach($trace as $traceElement){
+			if(is_subclass_of($traceElement['class'], 'BaseTest')){
+				$lastFunctionName = $traceElement['function'];
+			} else if($lastFunctionName!==NULL){
+				return $lastFunctionName;
+			}
+		}
+		throw new Exception('Could not determine caller function.');
 	}
 }
