@@ -77,6 +77,22 @@ abstract class BaseTest {
 	}
 	
 	/**
+	 * Records a fail
+	 * @param string $message Reason why a place should not have been reached
+	 */
+	public function fail($message=NULL){
+		$className = get_class($this);
+		$methodName = $this->getCallerFunction();
+		
+		if($message===NULL){
+			$message = 'This code should never have executed.';
+		}
+		echo $message.PHP_EOL;
+		
+		$this->testRunner->assertionFailed($className, $methodName);
+	}
+	
+	/**
 	 * Determines the caller of the method which calls this method.
 	 * @return string Method name
 	 */
