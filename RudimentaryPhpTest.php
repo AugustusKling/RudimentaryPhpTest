@@ -20,7 +20,7 @@ class RudimentaryPhpTest {
 	/**
 	 * @var string Delimiter for test summary
 	 */
-	const SUMMARY_DELMITER_HORIZONTAL = "\t\t";
+	const SUMMARY_DELMITER_HORIZONTAL = " ";
 	
 	/**
 	 * @var array Nested array to keep counters for passed and failed assertions
@@ -152,7 +152,7 @@ class RudimentaryPhpTest {
 			// See if method is a test by matching it against filter pattern
 			mb_ereg_search_init($className.'->'.$methodName, $testfilter);
 			if(mb_ereg_search()){
-				echo sprintf(PHP_EOL.'Running %s->%s'.PHP_EOL, $className, $methodName);
+				echo sprintf(PHP_EOL."\033[1mRunning %s->%s\033[0m".PHP_EOL, $className, $methodName);
 				$test->setUp();
 				
 				// Add counter for assertions
@@ -220,10 +220,41 @@ class RudimentaryPhpTest {
 	 * Prints a summary of passed and failed assertions
 	 */
 	private function printSummary(){
-		echo PHP_EOL.'Class Name'.self::SUMMARY_DELMITER_HORIZONTAL.'Method Name'.self::SUMMARY_DELMITER_HORIZONTAL.'Succeeded'.self::SUMMARY_DELMITER_HORIZONTAL.'Failed'.PHP_EOL;
+		$columnHeaders = array(
+			'className' => 'Class Name',
+			'methodName' => 'Method Name',
+			'succeeded' => 'Succeeded',
+			'failed' => 'Failed'
+		);
+		// Determine longest content lengths to get padding right
+		$maxLengths = array();
+		foreach($columnHeaders as $headerIndex => $header){
+			$maxLengths[$headerIndex] = mb_strlen($header);
+		};
 		foreach($this->assertions as $className => $assertions){
 			foreach($assertions as $methodName => $counts){
-				$noColorCode = "\033[0m";
+				$maxLengths['className'] = max(mb_strlen($className), $maxLengths['className']);
+				$maxLengths['methodName'] = max(mb_strlen($methodName), $maxLengths['methodName']);
+				$maxLengths['succeeded'] = max(mb_strlen($counts['succeeded']), $maxLengths['succeeded']);
+				$maxLengths['failed'] = max(mb_strlen($counts['failed']), $maxLengths['failed']);
+			}
+		}
+		
+		// Print column headers
+		echo sprintf(
+			PHP_EOL
+			."\033[1m%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
+			."%-${maxLengths['methodName']}s".self::SUMMARY_DELMITER_HORIZONTAL
+			."%-${maxLengths['succeeded']}s".self::SUMMARY_DELMITER_HORIZONTAL
+			."%-${maxLengths['failed']}s\033[0m"
+			.PHP_EOL,
+			$columnHeaders['className'], $columnHeaders['methodName'], $columnHeaders['succeeded'], $columnHeaders['failed']
+		);
+		
+		// Print tests along with assertion counts
+		$noColorCode = "\033[0m";
+		foreach($this->assertions as $className => $assertions){
+			foreach($assertions as $methodName => $counts){
 				$colorCodeSucceeded = $noColorCode;
 				$colorCodeFailed = $noColorCode;
 				if($counts['succeeded']>0){
@@ -234,7 +265,13 @@ class RudimentaryPhpTest {
 					// Print failures in red
 					$colorCodeFailed = "\033[0;31m";
 				}
-				echo sprintf('%s'.self::SUMMARY_DELMITER_HORIZONTAL.'%s'.self::SUMMARY_DELMITER_HORIZONTAL.$colorCodeSucceeded.'%d'.self::SUMMARY_DELMITER_HORIZONTAL.$colorCodeFailed.'%d'.PHP_EOL, $className, $methodName, $counts['succeeded'], $counts['failed']).$noColorCode;
+				echo sprintf(
+					"%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
+					."%-${maxLengths['methodName']}s".self::SUMMARY_DELMITER_HORIZONTAL
+					.$colorCodeSucceeded."%${maxLengths['succeeded']}s".self::SUMMARY_DELMITER_HORIZONTAL
+					.$colorCodeFailed."%${maxLengths['failed']}s"
+					.PHP_EOL,
+					$className, $methodName, $counts['succeeded'], $counts['failed']).$noColorCode;
 			}
 		}
 	}
