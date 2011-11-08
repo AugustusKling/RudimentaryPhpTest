@@ -7,7 +7,7 @@ After the test runs complete a simple table is printed to the console which list
 So far, this framework was developed and tested on PHP 5.3 running on Linux. It should run on any PHP 5 in theory, though.
 
 Invocation is as follows where the parameter testfilter is optional and testbase gives the root file or directory with tests to execute. Optionally, a file for preparing the environment for testing can be given with the bootstrap parameter:
-php -f RudimentaryPhpTest.php -- --testbase='samples' [ --testfilter='Test$' ] [ --bootstrap='….php' ]
+Usage: php RudimentaryPhpTest.php --testbase='samples' [ --testfilter='Test$' ] [ --bootstrap='….php' ]
 
 Exit codes are as follows:
 0: All tests succeeded (see console output for summary)

@@ -39,9 +39,13 @@ class RudimentaryPhpTest {
 	 */
 	private static function getOptions(array $defaults){
 		global $argv;
+		// Remove name of executed script from argument list
 		array_shift($argv);
+		
 		foreach($argv as $token){
+			// Split up each option into name and value
 			if(mb_ereg('--(.*)=(.*)', $token, $argument)!==FALSE){
+				// Override default value
 				$defaults[$argument[1]] = $argument[2];
 			} else {
 				throw new Exception(sprintf('Could not parse command line argument %s', $token));
@@ -54,12 +58,26 @@ class RudimentaryPhpTest {
 	 * Loads tests, executes tests, prints summary and exits
 	 */
 	public static function performTestsAndExit(){
-		// Parse command line arguments
+		// Default values for command line arguments
 		$optionDefaults = array(
+			/*
+			 * Path to file or directory containing tests.
+			 * Every class that is contained and inherits from BaseTest is executed as test.
+			 */
 			self::OPTION_TESTBASE => NULL,
+			/*
+			 * Regular expression to filter tests.
+			 * The expression is matched against CLASS->METHOD. For example if the test class was called SampleTest and contained a method called someTest, the expression would be matched against SampleTest->someTest. If the matched succeeds the test will be executed.
+			 */
 			self::OPTION_TESTFILTER => 'Test$',
+			/*
+			 * Path to initialization code.
+			 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from BaseTest).
+			 * The initialization code is executed exactly once before the first test is run.
+			 */
 			self::OPTION_BOOTSTRAP => NULL
 		);
+		// Parse command line arguments
 		$options = self::getOptions($optionDefaults);
 		if($options[self::OPTION_TESTBASE]===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
@@ -88,6 +106,7 @@ class RudimentaryPhpTest {
 	 */
 	private function bootstrap($file){
 		if($file===NULL){
+			// Run tests without initialization code since user choose not to give initialization code
 			return;
 		}
 		if(!file_exists($file)){
@@ -131,6 +150,7 @@ class RudimentaryPhpTest {
 	 * @param string $testfilter Multi-byte regular expression that is matched against CLASS->METHOD to filter tests.
 	 */
 	private function runTests($testfilter){
+		// Check all loaded classes for containing tests
 		$allClasses = get_declared_classes();
 		foreach($allClasses as $className){
 			if(is_subclass_of($className, 'BaseTest')){
@@ -146,10 +166,12 @@ class RudimentaryPhpTest {
 	 * @param string $testfilter Multi-byte regular expression that is matched against CLASS->METHOD to filter tests.
 	 */
 	private function runTestsOfClass($className, $testfilter){
+		// Instantiate test class
 		$test = new $className($this);
+		// Check all method names for matching the filter
 		$allMethods = get_class_methods($test);
 		foreach($allMethods as $methodName){
-			// See if method is a test by matching it against filter pattern
+			// See if method is a test by matching it against the filter pattern
 			mb_ereg_search_init($className.'->'.$methodName, $testfilter);
 			if(mb_ereg_search()){
 				echo sprintf(PHP_EOL."\033[1mRunning %s->%s\033[0m".PHP_EOL, $className, $methodName);
