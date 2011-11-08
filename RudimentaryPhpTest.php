@@ -33,17 +33,35 @@ class RudimentaryPhpTest {
 	private function __construct(){}
 	
 	/**
+	 * Looks for options in command line arguments
+	 * @param array $defaults Mapping containing default option values
+	 * @return array Mapping of arguments
+	 */
+	private static function getOptions(array $defaults){
+		global $argv;
+		array_shift($argv);
+		foreach($argv as $token){
+			if(mb_ereg('--(.*)=(.*)', $token, $argument)!==FALSE){
+				$defaults[$argument[1]] = $argument[2];
+			} else {
+				throw new Exception(sprintf('Could not parse command line argument %s', $token));
+			}
+		}
+		return $defaults;
+	}
+	
+	/**
 	 * Loads tests, executes tests, prints summary and exits
 	 */
 	public static function performTestsAndExit(){
 		// Parse command line arguments
 		$optionDefaults = array(
-			self::OPTION_TESTBASE.':' => NULL,
-			self::OPTION_TESTFILTER.':' => 'Test$',
-			self::OPTION_BOOTSTRAP.':' => NULL
+			self::OPTION_TESTBASE => NULL,
+			self::OPTION_TESTFILTER => 'Test$',
+			self::OPTION_BOOTSTRAP => NULL
 		);
-		$options = getopt('', array_keys($optionDefaults));
-		if(!isset($options[self::OPTION_TESTBASE])){
+		$options = self::getOptions($optionDefaults);
+		if($options[self::OPTION_TESTBASE]===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
 		
@@ -51,11 +69,11 @@ class RudimentaryPhpTest {
 		$testRunner = new self();
 		
 		// Prepare environment for tests
-		$testRunner->bootstrap(isset($options[self::OPTION_BOOTSTRAP])?$options[self::OPTION_BOOTSTRAP]:NULL);
+		$testRunner->bootstrap($options[self::OPTION_BOOTSTRAP]);
 		
 		// Execute tests
 		$testRunner->loadTests($options[self::OPTION_TESTBASE]);
-		$testRunner->runTests(isset($options[self::OPTION_TESTFILTER])?$options[self::OPTION_TESTFILTER]:$optionDefaults[self::OPTION_TESTFILTER.':']);
+		$testRunner->runTests($options[self::OPTION_TESTFILTER]);
 		
 		// Print table with test results
 		$testRunner->printSummary();
@@ -64,6 +82,10 @@ class RudimentaryPhpTest {
 		$testRunner->performExit();
 	}
 	
+	/**
+	 * Executes the named file
+	 * @param string $file Path to initialization code
+	 */
 	private function bootstrap($file){
 		if($file===NULL){
 			return;
@@ -260,6 +282,6 @@ class RudimentaryPhpTest {
 }
 
 // Print usage information
-echo 'Usage: php -f RudimentaryPhpTest.php -- --testbase=\'samples\' [ --testfilter=\'Test$\' ] [ --bootstrap=\'….php\' ]'.PHP_EOL;
+echo 'Usage: php RudimentaryPhpTest.php --testbase=\'samples\' [ --testfilter=\'Test$\' ] [ --bootstrap=\'….php\' ]'.PHP_EOL;
 // Run tests
 RudimentaryPhpTest::performTestsAndExit();
