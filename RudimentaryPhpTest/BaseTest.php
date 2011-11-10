@@ -36,7 +36,7 @@ abstract class RudimentaryPhpTest_BaseTest {
 		$methodName = $this->getCallerFunction();
 		if($expected===$actual){
 			// Record success
-			$this->testRunner->assertionSucceeded($className, $methodName);
+			$this->testRunner->assertionSucceeded($className, $methodName, 'Objects equaled in a type-safe check');
 		} else {
 			// Print cause of problem
 			if($message===NULL){
@@ -48,7 +48,7 @@ abstract class RudimentaryPhpTest_BaseTest {
 			echo 'Object 2 was:'.PHP_EOL;
 			var_dump($actual);
 			// Record failure
-			$this->testRunner->assertionFailed($className, $methodName);
+			$this->testRunner->assertionFailed($className, $methodName, $message);
 		}
 	}
 	
@@ -62,7 +62,7 @@ abstract class RudimentaryPhpTest_BaseTest {
 		$className = get_class($this);
 		$methodName = $this->getCallerFunction();
 		if($expected==$actual){
-			$this->testRunner->assertionSucceeded($className, $methodName);
+			$this->testRunner->assertionSucceeded($className, $methodName, 'Objects equaled in a loose-typed check');
 		} else {
 			if($message===NULL){
 				$message = 'Objects did not equal each other in a check with loose typing';
@@ -89,7 +89,7 @@ abstract class RudimentaryPhpTest_BaseTest {
 		}
 		echo $message.PHP_EOL;
 		
-		$this->testRunner->assertionFailed($className, $methodName);
+		$this->testRunner->assertionFailed($className, $methodName, $message);
 	}
 	
 	/**

@@ -8,6 +8,8 @@ mb_regex_encoding("UTF-8");
 
 // Load own dependencies
 require_once('RudimentaryPhpTest/BaseTest.php');
+require_once('RudimentaryPhpTest/Listener.php');
+require_once('RudimentaryPhpTest/Listener/Console.php');
 
 /**
  * Parses command line arguments and runs tests when instantiated
@@ -16,41 +18,51 @@ class RudimentaryPhpTest {
 	const OPTION_TESTBASE = 'testbase';
 	const OPTION_TESTFILTER = 'testfilter';
 	const OPTION_BOOTSTRAP = 'bootstrap';
+	const OPTION_LISTENER = 'listener';
 	
-	// Default values for command line arguments
+	/**
+	 * @var array Default values for command line arguments
+	 */
 	private static $optionDefaults = array(
-    	/*
-    	 * Path to file or directory containing tests.
-    	 * Every class that is contained and inherits from RudimentaryPhpTest_BaseTest is executed as test.
-    	 */
-    	self::OPTION_TESTBASE => NULL,
-    	/*
-    	 * Regular expression to filter tests.
-    	 * The expression is matched against CLASS->METHOD. For example if the test class was called SampleTest and contained a method called someTest, the expression would be matched against SampleTest->someTest. If the matched succeeds the test will be executed.
-    	 */
-    	self::OPTION_TESTFILTER => 'Test$',
-    	/*
-    	 * Path to initialization code.
-    	 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from RudimentaryPhpTest_BaseTest).
-    	 * The initialization code is executed exactly once before the first test is run.
-    	 */
-    	self::OPTION_BOOTSTRAP => NULL
+		/*
+		 * Path to file or directory containing tests.
+		 * Every class that is contained and inherits from RudimentaryPhpTest_BaseTest is executed as test.
+		 */
+		self::OPTION_TESTBASE => NULL,
+		/*
+		 * Regular expression to filter tests.
+		 * The expression is matched against CLASS->METHOD. For example if the test class was called SampleTest and contained a method called someTest, the expression would be matched against SampleTest->someTest. If the matched succeeds the test will be executed.
+		 */
+		self::OPTION_TESTFILTER => 'Test$',
+		/*
+		 * Path to initialization code.
+		 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from RudimentaryPhpTest_BaseTest).
+		 * The initialization code is executed exactly once before the first test is run.
+		 */
+		self::OPTION_BOOTSTRAP => NULL,
+		/*
+		 * Instance of RudimentaryPhpTest_Listener to be used instead of the default RudimentaryPhpTest_Listener_Console instance to print to the console.
+		 * Set an instance of another implementation to control logging.
+		 */
+		self::OPTION_LISTENER => NULL
 	);
 	
 	/**
-	 * @var string Delimiter for test summary
+	 * @var RudimentaryPhpTest_Listener Listener to take record of test execution progress. The listener should not be used to influence the tests.
 	 */
-	const SUMMARY_DELMITER_HORIZONTAL = " ";
+	private $listener;
 	
 	/**
-	 * @var array Nested array to keep counters for passed and failed assertions
+	 * @var boolean Flag to record if at least one assertion failed in order to set exit code
 	 */
-	private $assertions = array();
+	private $atLeastOneAssertionFailed = FALSE;
 	
 	/**
 	 * Test runner must only be instatiated by static function performTestsAndExit
 	 */
-	private function __construct(){}
+	private function __construct(RudimentaryPhpTest_Listener $listener){
+		$this->listener = $listener;
+	}
 	
 	/**
 	 * Looks for options in command line arguments
@@ -61,11 +73,11 @@ class RudimentaryPhpTest {
 		global $argv;
 		
 		foreach($argv as $index => $token){
-    		// Ignore name of executed script in argument list
-    		if($index===0){
-    		    continue;
-    		}
-    		
+			// Ignore name of executed script in argument list
+			if($index===0){
+				continue;
+			}
+			
 			// Split up each option into name and value
 			if(mb_ereg('--(.*)=(.*)', $token, $argument)!==FALSE){
 				// Override default value
@@ -99,27 +111,30 @@ class RudimentaryPhpTest {
 	 * Loads tests, executes tests, prints summary and exits
 	 */
 	public static function performTestsAndExit(){
-	    // Create test runner instance
-	    $testRunner = new self();
-	    
-	    // Check if a bootstrap file was provided
-	    $options = self::getOptions(self::$optionDefaults);
-	    
-	    // Prepare environment for tests
-	    $testRunner->bootstrap($options[self::OPTION_BOOTSTRAP]);
-	    
+		// Check if a bootstrap file was provided
+		$options = self::getOptions(self::$optionDefaults);
+		
+		// Prepare environment for tests
+		self::bootstrap($options[self::OPTION_BOOTSTRAP]);
+		
 		// Parse command line arguments again because bootstrap code could overridden default options
 		$options = self::getOptions(self::$optionDefaults);
 		if($options[self::OPTION_TESTBASE]===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
 		
+		// Create test runner instance
+		$listener = $options[self::OPTION_LISTENER];
+		if($listener===NULL){
+			$listener = new RudimentaryPhpTest_Listener_Console();
+		}
+		$testRunner = new self($listener);
+		
 		// Execute tests
 		$testRunner->loadTests($options[self::OPTION_TESTBASE]);
+		$testRunner->listener->setUpSuite(realpath($options[self::OPTION_TESTBASE]));
 		$testRunner->runTests($options[self::OPTION_TESTFILTER]);
-		
-		// Print table with test results
-		$testRunner->printSummary();
+		$testRunner->listener->tearDownSuite(realpath($options[self::OPTION_TESTBASE]));
 		
 		// Fail with error code when an assertion failed
 		$testRunner->performExit();
@@ -129,7 +144,7 @@ class RudimentaryPhpTest {
 	 * Executes the named file
 	 * @param string $file Path to initialization code
 	 */
-	private function bootstrap($file){
+	private static function bootstrap($file){
 		if($file===NULL){
 			// Run tests without initialization code since user choose not to give initialization code
 			return;
@@ -180,7 +195,9 @@ class RudimentaryPhpTest {
 		foreach($allClasses as $className){
 			if(is_subclass_of($className, 'RudimentaryPhpTest_BaseTest')){
 				// Assume all classes that inherit from RudimentaryPhpTest_BaseTest contain tests
+				$this->listener->setUpClass($className);
 				$this->runTestsOfClass($className, $testfilter);
+				$this->listener->tearDownClass($className);
 			}
 		}
 	}
@@ -199,48 +216,42 @@ class RudimentaryPhpTest {
 			// See if method is a test by matching it against the filter pattern
 			mb_ereg_search_init($className.'->'.$methodName, $testfilter);
 			if(mb_ereg_search()){
-				echo sprintf(PHP_EOL."\033[1mRunning %s->%s\033[0m".PHP_EOL, $className, $methodName);
+				$this->listener->setUpTest($className, $methodName);
 				$test->setUp();
 				
-				// Add counter for assertions
-				$this->assertions[$className][$methodName] = array(
-					'succeeded' => 0,
-					'failed' => 0
-				);
 				// Check method comment for @expect annotations
-				$reflection = new ReflectionMethod($test, $methodName);
-				$documentation = $reflection->getDocComment();
-				if($documentation===FALSE){
-					$expectedExceptions = array();
-				} else {
-					$expectedExceptions = $this->parseExpectedExceptions($documentation);
-				}
+				$expectedException = $this->parseExpectedException($test, $methodName);
 				
+				$testOutput = NULL;
 				try {
 					// Invoke test
+					ob_start();
 					$test->$methodName();
+					$testOutput = ob_get_clean();
+					
+					if($expectedException!==NULL){
+						// Expected exception was not caught
+						$caughtAllExpectedExceptions = FALSE;
+						$this->assertionFailed($className, $methodName,
+							sprintf('Expected exception %s was not thrown', $exceptionName));
+					}
 				} catch(Exception $e){
+					$testOutput = ob_get_clean();
 					// Catch everything to prevent simple failures in tests from breaking test run
-					if(!isset($expectedExceptions[get_class($e)])){
-						// Print all exceptions to console that are not expected to happen. Rethrowing breaks stack-trace unfortunately.
-						echo $e;
+					if($expectedException!==get_class($e)){
 						// Record the unexpected exception as failure
-						$this->assertionFailed($className, $methodName);
+						$this->assertionFailed($className, $methodName, 'Unexpected exception caught.');
+						$this->listener->unexpectedException($className, $methodName, $e);
 					} else {
 						// Record catch
-						$expectedExceptions[get_class($e)] += 1;
-					}
-				}
-				// Check if all expected exceptions did actually happen
-				foreach($expectedExceptions as $exceptionName => $countCaught){
-					if($countCaught===0){
-						// Expected exception was never caught
-						echo sprintf('Expected exception %s was not thrown'.PHP_EOL, $exceptionName);
-						$this->assertionFailed($className, $methodName);
+						$this->assertionSucceeded($className, $methodName, 'Caught expected exception.');
 					}
 				}
 				
+				$this->listener->tearDownTest($className, $methodName, $testOutput);
 				$test->tearDown();
+			} else {
+				$this->listener->skippedTest($className, $methodName);
 			}
 		}
 	}
@@ -249,99 +260,53 @@ class RudimentaryPhpTest {
 	 * Records a passed assertion
 	 * @param string $className Name of test class
 	 * @param string $methodName Name of test method
+	 * @param string $message Explanation of assertion purpose
 	 */
-	public function assertionSucceeded($className, $methodName){
-		$this->assertions[$className][$methodName]['succeeded'] += 1;
+	public function assertionSucceeded($className, $methodName, $message){
+		$this->listener->assertionSuccess($className, $methodName, $message);
 	}
 	
 	/**
 	 * Records a failed assertion
 	 * @param string $className Name of test class
 	 * @param string $methodName Name of test method
+	 * @param string $message Explanation of assertion purpose
 	 */
-	public function assertionFailed($className, $methodName){
-		$this->assertions[$className][$methodName]['failed'] += 1;
+	public function assertionFailed($className, $methodName, $message){
+		$this->atLeastOneAssertionFailed = TRUE;
+		$this->listener->assertionFailure($className, $methodName, $message);
 	}
 	
 	/**
-	 * Prints a summary of passed and failed assertions
-	 */
-	private function printSummary(){
-		$columnHeaders = array(
-			'className' => 'Class Name',
-			'methodName' => 'Method Name',
-			'succeeded' => 'Succeeded',
-			'failed' => 'Failed'
-		);
-		// Determine longest content lengths to get padding right
-		$maxLengths = array();
-		foreach($columnHeaders as $headerIndex => $header){
-			$maxLengths[$headerIndex] = mb_strlen($header);
-		};
-		foreach($this->assertions as $className => $assertions){
-			foreach($assertions as $methodName => $counts){
-				$maxLengths['className'] = max(mb_strlen($className), $maxLengths['className']);
-				$maxLengths['methodName'] = max(mb_strlen($methodName), $maxLengths['methodName']);
-				$maxLengths['succeeded'] = max(mb_strlen($counts['succeeded']), $maxLengths['succeeded']);
-				$maxLengths['failed'] = max(mb_strlen($counts['failed']), $maxLengths['failed']);
-			}
-		}
-		
-		// Print column headers
-		echo sprintf(
-			PHP_EOL
-			."\033[1m%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
-			."%-${maxLengths['methodName']}s".self::SUMMARY_DELMITER_HORIZONTAL
-			."%-${maxLengths['succeeded']}s".self::SUMMARY_DELMITER_HORIZONTAL
-			."%-${maxLengths['failed']}s\033[0m"
-			.PHP_EOL,
-			$columnHeaders['className'], $columnHeaders['methodName'], $columnHeaders['succeeded'], $columnHeaders['failed']
-		);
-		
-		// Print tests along with assertion counts
-		$noColorCode = "\033[0m";
-		foreach($this->assertions as $className => $assertions){
-			foreach($assertions as $methodName => $counts){
-				$colorCodeSucceeded = $noColorCode;
-				$colorCodeFailed = $noColorCode;
-				if($counts['succeeded']>0){
-					// Print passes in green
-					$colorCodeSucceeded = "\033[0;32m";
-				}
-				if($counts['failed']>0){
-					// Print failures in red
-					$colorCodeFailed = "\033[0;31m";
-				}
-				echo sprintf(
-					"%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
-					."%-${maxLengths['methodName']}s".self::SUMMARY_DELMITER_HORIZONTAL
-					.$colorCodeSucceeded."%${maxLengths['succeeded']}s".self::SUMMARY_DELMITER_HORIZONTAL
-					.$colorCodeFailed."%${maxLengths['failed']}s"
-					.PHP_EOL,
-					$className, $methodName, $counts['succeeded'], $counts['failed']).$noColorCode;
-			}
-		}
-	}
-	
-	/**
-	 * Parse annotations from method comment since PHP does not offer annotation support
+	 * Parse annotations from method comment since PHP does not offer annotation support.
+	 * Annotate an expected exception by @expect followed by the exception's class name.
 	 * @param string $documentation Method comment to parse
-	 * @return array Mapping of exception name to times caught
+	 * @return string|NULL Exception class name of exception expected to be caught
 	 */
-	private function parseExpectedExceptions($documentation){
+	private function parseExpectedException($test, $methodName){
+		$reflection = new ReflectionMethod($test, $methodName);
+		$documentation = $reflection->getDocComment();
+		if($documentation===FALSE){
+			// There is not method comment so it can't declare an expected exception
+			return NULL;
+		}
+		
 		// Look for @expect followed by exception name
 		mb_ereg_search_init($documentation, '\\s*\\*\\s*@expect\\s+(\\w+)');
 		if(mb_ereg_search()){
-			$expectedExceptions = array();
+			$expectedException = NULL;
 			while($exceptionMatch = mb_ereg_search_getregs()){
+				if($expectedException!==NULL){
+					throw new Exception(sprintf('More than 1 expected exceptions declared for %s->%s.', get_class($test), $methodName));
+				}
 				// Matched group is exception name
-				$expectedExceptions[$exceptionMatch[1]] = 0;
+				$expectedException = $exceptionMatch[1];
 				mb_ereg_search_regs();
 			}
-			return $expectedExceptions;
-		} else {
-			return array();
 		}
+		
+		// No @expect annotation was found
+		return NULL;
 	}
 	
 	/**
@@ -352,13 +317,9 @@ class RudimentaryPhpTest {
 		echo PHP_EOL;
 		
 		// See if there are any failed assertions
-		foreach($this->assertions as $assertions){
-			foreach($assertions as $assertion){
-				if($assertion['failed']>0){
-					// End with error code
-					exit(1);
-				}
-			}
+		if($this->atLeastOneAssertionFailed){
+			// End with error code
+			exit(1);
 		}
 		// End with success code
 		exit(0);
@@ -366,6 +327,6 @@ class RudimentaryPhpTest {
 }
 
 // Print usage information
-echo 'Usage: php RudimentaryPhpTest.php --testbase=\'samples\' [ --testfilter=\'Test$\' ] [ --bootstrap=\'….php\' ]'.PHP_EOL;
+echo 'Usage: php RudimentaryPhpTest.php --testbase=\'samples/test\' [ --testfilter=\'Test$\' ] [ --bootstrap=\'….php\' ]'.PHP_EOL;
 // Run tests
 RudimentaryPhpTest::performTestsAndExit();

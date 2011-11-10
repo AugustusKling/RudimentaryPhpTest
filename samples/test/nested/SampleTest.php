@@ -1,6 +1,6 @@
 <?php
 /**
- * An example test class. It needs to inherit from RudimentaryPhpTest_BaseTest to be accepted as test
+ * An example test class. It needs to inherit from RudimentaryPhpTest_BaseTest to be accepted as test.
  */
 class SampleTest extends RudimentaryPhpTest_BaseTest {
 	public function dummyTest(){
