@@ -17,6 +17,26 @@ class RudimentaryPhpTest {
 	const OPTION_TESTFILTER = 'testfilter';
 	const OPTION_BOOTSTRAP = 'bootstrap';
 	
+	// Default values for command line arguments
+	private static $optionDefaults = array(
+    	/*
+    	 * Path to file or directory containing tests.
+    	 * Every class that is contained and inherits from BaseTest is executed as test.
+    	 */
+    	self::OPTION_TESTBASE => NULL,
+    	/*
+    	 * Regular expression to filter tests.
+    	 * The expression is matched against CLASS->METHOD. For example if the test class was called SampleTest and contained a method called someTest, the expression would be matched against SampleTest->someTest. If the matched succeeds the test will be executed.
+    	 */
+    	self::OPTION_TESTFILTER => 'Test$',
+    	/*
+    	 * Path to initialization code.
+    	 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from BaseTest).
+    	 * The initialization code is executed exactly once before the first test is run.
+    	 */
+    	self::OPTION_BOOTSTRAP => NULL
+	);
+	
 	/**
 	 * @var string Delimiter for test summary
 	 */
@@ -39,10 +59,13 @@ class RudimentaryPhpTest {
 	 */
 	private static function getOptions(array $defaults){
 		global $argv;
-		// Remove name of executed script from argument list
-		array_shift($argv);
 		
-		foreach($argv as $token){
+		foreach($argv as $index => $token){
+    		// Ignore name of executed script in argument list
+    		if($index===0){
+    		    continue;
+    		}
+    		
 			// Split up each option into name and value
 			if(mb_ereg('--(.*)=(.*)', $token, $argument)!==FALSE){
 				// Override default value
@@ -55,39 +78,41 @@ class RudimentaryPhpTest {
 	}
 	
 	/**
+	 * Overrides an option's default value.
+	 * Intended to be called from a bootstrap file to give sensible defaults. Values set with this
+	 * method do never override values that are provided as command line arguments. 
+	 * @param string $option Any of the OPTION_* constants in this class
+	 * @param string $value Value to use if option is not provided as command line argument.
+	 * @throws Exception
+	 */
+	public static function overrideDefaultOption($option, $value){
+	    if($option===self::OPTION_BOOTSTRAP){
+	        throw new Exception('Overriding the bootstrapping option has no effect.');
+	    }
+	    if(!array_key_exists($option, self::$optionDefaults)){
+	        throw new Exception('Provided option does not exist');
+	    }
+	    self::$optionDefaults[$option] = $value;
+	}
+	
+	/**
 	 * Loads tests, executes tests, prints summary and exits
 	 */
 	public static function performTestsAndExit(){
-		// Default values for command line arguments
-		$optionDefaults = array(
-			/*
-			 * Path to file or directory containing tests.
-			 * Every class that is contained and inherits from BaseTest is executed as test.
-			 */
-			self::OPTION_TESTBASE => NULL,
-			/*
-			 * Regular expression to filter tests.
-			 * The expression is matched against CLASS->METHOD. For example if the test class was called SampleTest and contained a method called someTest, the expression would be matched against SampleTest->someTest. If the matched succeeds the test will be executed.
-			 */
-			self::OPTION_TESTFILTER => 'Test$',
-			/*
-			 * Path to initialization code.
-			 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from BaseTest).
-			 * The initialization code is executed exactly once before the first test is run.
-			 */
-			self::OPTION_BOOTSTRAP => NULL
-		);
-		// Parse command line arguments
-		$options = self::getOptions($optionDefaults);
+	    // Create test runner instance
+	    $testRunner = new self();
+	    
+	    // Check if a bootstrap file was provided
+	    $options = self::getOptions(self::$optionDefaults);
+	    
+	    // Prepare environment for tests
+	    $testRunner->bootstrap($options[self::OPTION_BOOTSTRAP]);
+	    
+		// Parse command line arguments again because bootstrap code could overridden default options
+		$options = self::getOptions(self::$optionDefaults);
 		if($options[self::OPTION_TESTBASE]===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
-		
-		// Create test runner instance
-		$testRunner = new self();
-		
-		// Prepare environment for tests
-		$testRunner->bootstrap($options[self::OPTION_BOOTSTRAP]);
 		
 		// Execute tests
 		$testRunner->loadTests($options[self::OPTION_TESTBASE]);
