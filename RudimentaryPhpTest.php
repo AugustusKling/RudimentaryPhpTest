@@ -7,7 +7,7 @@ mb_internal_encoding("UTF-8");
 mb_regex_encoding("UTF-8");
 
 // Load own dependencies
-require_once('BaseTest.php');
+require_once('RudimentaryPhpTest/BaseTest.php');
 
 /**
  * Parses command line arguments and runs tests when instantiated
@@ -21,7 +21,7 @@ class RudimentaryPhpTest {
 	private static $optionDefaults = array(
     	/*
     	 * Path to file or directory containing tests.
-    	 * Every class that is contained and inherits from BaseTest is executed as test.
+    	 * Every class that is contained and inherits from RudimentaryPhpTest_BaseTest is executed as test.
     	 */
     	self::OPTION_TESTBASE => NULL,
     	/*
@@ -31,7 +31,7 @@ class RudimentaryPhpTest {
     	self::OPTION_TESTFILTER => 'Test$',
     	/*
     	 * Path to initialization code.
-    	 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from BaseTest).
+    	 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from RudimentaryPhpTest_BaseTest).
     	 * The initialization code is executed exactly once before the first test is run.
     	 */
     	self::OPTION_BOOTSTRAP => NULL
@@ -178,8 +178,8 @@ class RudimentaryPhpTest {
 		// Check all loaded classes for containing tests
 		$allClasses = get_declared_classes();
 		foreach($allClasses as $className){
-			if(is_subclass_of($className, 'BaseTest')){
-				// Assume all classes that inherit from BaseTest contain tests
+			if(is_subclass_of($className, 'RudimentaryPhpTest_BaseTest')){
+				// Assume all classes that inherit from RudimentaryPhpTest_BaseTest contain tests
 				$this->runTestsOfClass($className, $testfilter);
 			}
 		}

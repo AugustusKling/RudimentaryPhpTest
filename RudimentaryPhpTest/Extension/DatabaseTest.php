@@ -5,7 +5,7 @@
  * The basic idea is to fill a database with test data (using a dump of a non-test database for example). Then a connection to the database is made once and cached in a static property.
  * Before each test a new transaction is started which is always rolled back after the test completes. Thus the database content is never affected by the test methods. Time is saved that would otherwise have spent rebuilding the test database content.
  */
-class RudimentaryPhpTest_Extension_DatabaseTest extends BaseTest {
+class RudimentaryPhpTest_Extension_DatabaseTest extends RudimentaryPhpTest_BaseTest {
 	/**
 	 * @var DummyDatabaseConnection Sample database connection
 	 */

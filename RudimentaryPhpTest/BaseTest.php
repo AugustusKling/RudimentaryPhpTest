@@ -2,7 +2,7 @@
 /**
  * Base for all test classes
  */
-abstract class BaseTest {
+abstract class RudimentaryPhpTest_BaseTest {
 	/**
 	 * @var RudimentaryPhpTest Test executor
 	 */
@@ -100,7 +100,7 @@ abstract class BaseTest {
 		$trace = debug_backtrace();
 		$lastFunctionName = NULL;
 		foreach($trace as $traceElement){
-			if(is_subclass_of($traceElement['class'], 'BaseTest')){
+			if(is_subclass_of($traceElement['class'], 'RudimentaryPhpTest_BaseTest')){
 				$lastFunctionName = $traceElement['function'];
 			} else if($lastFunctionName!==NULL){
 				return $lastFunctionName;

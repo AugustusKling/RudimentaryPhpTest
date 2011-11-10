@@ -1,8 +1,8 @@
 <?php
 /**
- * An example test class. It needs to inherit from BaseTest to be accepted as test
+ * An example test class. It needs to inherit from RudimentaryPhpTest_BaseTest to be accepted as test
  */
-class SampleTest extends BaseTest {
+class SampleTest extends RudimentaryPhpTest_BaseTest {
 	public function dummyTest(){
 		// Fails and prints message
 		$this->assertEquals('dummy', 'dumy', 'test');
