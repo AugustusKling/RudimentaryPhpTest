@@ -25,7 +25,7 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
         $logContent = $this->log->saveXML();
         $writeSucceeded = file_put_contents($this->filename, $logContent);
         if($writeSucceeded===FALSE){
-            throw new Exception('Failed to write test log to %s', realpath($this->filename));
+            throw new Exception(sprintf('Failed to write test log to %s', realpath($this->filename)));
         }
     }
     
