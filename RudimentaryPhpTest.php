@@ -65,11 +65,9 @@ class RudimentaryPhpTest {
 	}
 	
 	/**
-	 * Looks for options in command line arguments
-	 * @param array $defaults Mapping containing default option values
-	 * @return array Mapping of arguments
+	 * Looks for options in command line arguments and updates defaults
 	 */
-	private static function getOptions(array $defaults){
+	private static function parseOptions(){
 		global $argv;
 		
 		foreach($argv as $index => $token){
@@ -81,19 +79,18 @@ class RudimentaryPhpTest {
 			// Split up each option into name and value
 			if(mb_ereg('--(.*)=(.*)', $token, $argument)!==FALSE){
 				// Override default value
-				$defaults[$argument[1]] = $argument[2];
+				self::$optionDefaults[$argument[1]] = $argument[2];
 			} else {
 				throw new Exception(sprintf('Could not parse command line argument %s', $token));
 			}
 		}
-		return $defaults;
 	}
 	
 	/**
 	 * Overrides an option's default value.
 	 * Intended to be called from a bootstrap file to give sensible defaults. Values set with this
 	 * method do never override values that are provided as command line arguments. 
-	 * @param string $option Any of the OPTION_* constants in this class
+	 * @param string $option Any of the OPTION_* constants in this class or user-defined name
 	 * @param string $value Value to use if option is not provided as command line argument.
 	 * @throws Exception
 	 */
@@ -101,10 +98,19 @@ class RudimentaryPhpTest {
 	    if($option===self::OPTION_BOOTSTRAP){
 	        throw new Exception('Overriding the bootstrapping option has no effect.');
 	    }
-	    if(!array_key_exists($option, self::$optionDefaults)){
-	        throw new Exception('Provided option does not exist');
-	    }
 	    self::$optionDefaults[$option] = $value;
+	}
+	
+	/**
+	 * Reads an option after bootstrapping
+	 * @param string $option Name of the option
+	 * @return mixed Option value that will be used during tests
+	 */
+	public static function getOption($option){
+	    if(!array_key_exists($option, self::$optionDefaults)){
+	        throw new Exception(sprintf('Option %s does not exist.', $option));
+	    }
+	    return self::$optionDefaults[$option];
 	}
 	
 	/**
@@ -112,29 +118,31 @@ class RudimentaryPhpTest {
 	 */
 	public static function performTestsAndExit(){
 		// Check if a bootstrap file was provided
-		$options = self::getOptions(self::$optionDefaults);
+		self::parseOptions();
 		
 		// Prepare environment for tests
-		self::bootstrap($options[self::OPTION_BOOTSTRAP]);
+		self::bootstrap();
 		
 		// Parse command line arguments again because bootstrap code could overridden default options
-		$options = self::getOptions(self::$optionDefaults);
-		if($options[self::OPTION_TESTBASE]===NULL){
+		self::parseOptions();
+		$testbaseOption = self::getOption(self::OPTION_TESTBASE); 
+		if($testbaseOption===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
 		
 		// Create test runner instance
-		$listener = $options[self::OPTION_LISTENER];
+		$listener = self::getOption(self::OPTION_LISTENER);
 		if($listener===NULL){
 			$listener = new RudimentaryPhpTest_Listener_Console();
 		}
 		$testRunner = new self($listener);
 		
 		// Execute tests
-		$testRunner->loadTests($options[self::OPTION_TESTBASE]);
-		$testRunner->listener->setUpSuite(realpath($options[self::OPTION_TESTBASE]));
-		$testRunner->runTests($options[self::OPTION_TESTFILTER]);
-		$testRunner->listener->tearDownSuite(realpath($options[self::OPTION_TESTBASE]));
+		$testbase = realpath($testbaseOption);
+		$testRunner->loadTests($testbase);
+		$testRunner->listener->setUpSuite($testbase);
+		$testRunner->runTests(self::getOption(self::OPTION_TESTFILTER));
+		$testRunner->listener->tearDownSuite($testbase);
 		
 		// Fail with error code when an assertion failed
 		$testRunner->performExit();
@@ -142,9 +150,9 @@ class RudimentaryPhpTest {
 	
 	/**
 	 * Executes the named file
-	 * @param string $file Path to initialization code
 	 */
-	private static function bootstrap($file){
+	private static function bootstrap(){
+	    $file = self::getOption(self::OPTION_BOOTSTRAP);
 		if($file===NULL){
 			// Run tests without initialization code since user choose not to give initialization code
 			return;

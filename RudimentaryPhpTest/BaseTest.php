@@ -36,7 +36,10 @@ abstract class RudimentaryPhpTest_BaseTest {
 		$methodName = $this->getCallerFunction();
 		if($expected===$actual){
 			// Record success
-			$this->testRunner->assertionSucceeded($className, $methodName, 'Objects equaled in a type-safe check');
+			if($message===NULL){
+			    $message = 'Objects equaled in a type-safe check';
+			}
+			$this->testRunner->assertionSucceeded($className, $methodName, $message);
 		} else {
 			// Print cause of problem
 			if($message===NULL){

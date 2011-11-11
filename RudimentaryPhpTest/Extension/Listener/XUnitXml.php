@@ -19,24 +19,6 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
     private $suite;
     
     /**
-     * @param string $filename Path to the file where the log shall be stored
-     */
-    public function __construct($filename){
-        $this->filename = $filename;
-        
-        $log = new DOMDocument('1.0', 'UTF-8');
-        // Indent output
-        $log->formatOutput = TRUE;
-        $this->log = $log;
-        
-        $root = $log->createElement('testsuites');
-        $log->appendChild($root);
-        
-        // Try to save log to find out about missing permissions early
-        $this->saveLog();
-    }
-    
-    /**
      * Saves the log to a file
      */
     private function saveLog(){
@@ -48,6 +30,21 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
     }
     
 	public function setUpSuite($path){
+	    // Read option to know where to place the log
+	    $filename = RudimentaryPhpTest::getOption('XUnitXml.file');
+	    $this->filename = $filename;
+	    
+	    $log = new DOMDocument('1.0', 'UTF-8');
+	    // Indent output
+	    $log->formatOutput = TRUE;
+	    $this->log = $log;
+	    
+	    $root = $log->createElement('testsuites');
+	    $log->appendChild($root);
+	    
+	    // Try to save log to find out about missing permissions early
+	    $this->saveLog();
+	    
 	    $suite = $this->log->createElement('testsuite');
 	    $suite->setAttribute('name', $path);
 	    $suite->setAttribute('tests', 0);
