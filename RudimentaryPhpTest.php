@@ -193,7 +193,8 @@ class RudimentaryPhpTest {
 		// Check all loaded classes for containing tests
 		$allClasses = get_declared_classes();
 		foreach($allClasses as $className){
-			if(is_subclass_of($className, 'RudimentaryPhpTest_BaseTest')){
+		    $classReflection = new ReflectionClass($className);
+			if($classReflection->isSubclassOf('RudimentaryPhpTest_BaseTest') && $classReflection->isInstantiable()){
 				// Assume all classes that inherit from RudimentaryPhpTest_BaseTest contain tests
 				$this->listener->setUpClass($className);
 				$this->runTestsOfClass($className, $testfilter);
