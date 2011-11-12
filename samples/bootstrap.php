@@ -15,10 +15,13 @@ spl_autoload_register('sample_autoloader', TRUE);
 // Another example would be to override logging to the console
 require_once('RudimentaryPhpTest/Listener/Spreader.php');
 // Override a default option. Defaults set in bootstrapping code can still be overridden by command line arguments.
+RudimentaryPhpTest::overrideDefaultOption('XUnitXml.file', 'log.xml');
 RudimentaryPhpTest::overrideDefaultOption(RudimentaryPhpTest::OPTION_LISTENER,
 	// Attach a spreader to supply multiple listeners as constructor arguments
 	new RudimentaryPhpTest_Listener_Spreader(
 		// Log to console (and append desired loggers here)
-		new RudimentaryPhpTest_Listener_Console()
+		new RudimentaryPhpTest_Listener_Console(),
+		// Log to XML format as well
+		new RudimentaryPhpTest_Extension_Listener_XUnitXml()
 	)
 );

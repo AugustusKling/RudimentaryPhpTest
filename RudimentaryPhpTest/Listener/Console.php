@@ -7,11 +7,36 @@ class RudimentaryPhpTest_Listener_Console implements RudimentaryPhpTest_Listener
 	 * @var string Delimiter for test summary
 	 */
 	const SUMMARY_DELMITER_HORIZONTAL = " ";
+	
+	/**
+	 * @var string Control character for normal font
+	 */
+	private $FONT_INFORMATIVE_NORMAL = "\033[0m";
+	
+	/**
+	 * @var string Control character for bold font
+	 */
+	private $FONT_INFORMATIVE_BOLD = "\033[1m";
+	
+	/**
+	 * @var string Control character for redish font
+	 */
+	private $FONT_FAILURE_NORMAL = "\033[0;31m";
+	
+	/**
+	 * @var string Control character for greenish font
+	 */
+	private $FONT_SUCCESS_NORMAL = "\033[0;32m";
 		
 	/**
 	 * @var array Nested array to keep counters for passed and failed assertions
 	 */
 	private $assertions = array();
+	
+	/**
+	 * @var ReflectionMethod Method that is currently under test
+	 */
+	private $currentTest = NULL;
 	
 	public function setUpSuite($path){
 	}
@@ -30,22 +55,37 @@ class RudimentaryPhpTest_Listener_Console implements RudimentaryPhpTest_Listener
 	public function skippedTest($className, $methodName){
 	}
 	
-	public function setUpTest($className, $methodName){
+	public function setUpTest($className, $methodName, $file, $line){
 		// Add counter for assertions
 		$this->assertions[$className][$methodName] = array(
 			'succeeded' => 0,
 			'failed' => 0
 		);
 		
-		echo sprintf(PHP_EOL."\033[1mRunning %s->%s\033[0m".PHP_EOL, $className, $methodName);
+		// Keep track of the method under test since locations of assertive calls are not neccessarily within the method under test
+		$this->currentTest = new ReflectionMethod($className, $methodName);
+		
+		echo sprintf(PHP_EOL.$this->FONT_INFORMATIVE_BOLD.'Running %s->%s'.$this->FONT_INFORMATIVE_NORMAL.PHP_EOL, $className, $methodName);
 	}
 	
-	public function assertionSuccess($className, $methodName, $message){
-		$this->assertions[$className][$methodName]['succeeded'] += 1;
+	/**
+	 * Increase the counters for succeeded and failed assertions
+	 * @param string $counterName Either succeeded or failed
+	 */
+	private function increaseCounter($counterName){
+		$className = $this->currentTest->getDeclaringClass()->getName();
+		$methodName = $this->currentTest->getName();
+		$this->assertions[$className][$methodName][$counterName] += 1;
 	}
 	
-	public function assertionFailure($className, $methodName, $message){
-		$this->assertions[$className][$methodName]['failed'] += 1;
+	public function assertionSuccess($className, $methodName, $file, $line, $message){
+		echo sprintf($this->FONT_SUCCESS_NORMAL.'Assertion succeeded at line %d: %s'.$this->FONT_INFORMATIVE_NORMAL.PHP_EOL, $line, $message);
+		$this->increaseCounter('succeeded');
+	}
+	
+	public function assertionFailure($className, $methodName, $file, $line, $message){
+		echo sprintf($this->FONT_FAILURE_NORMAL.'Assertion failed at line %d: %s'.$this->FONT_INFORMATIVE_NORMAL.PHP_EOL, $line, $message);
+		$this->increaseCounter('failed');
 	}
 	
 	public function unexpectedException($className, $methodName, $exception){
@@ -55,7 +95,11 @@ class RudimentaryPhpTest_Listener_Console implements RudimentaryPhpTest_Listener
 	}
 	
 	public function tearDownTest($className, $methodName, $output){
-		echo $output;
+		$this->currentTest = NULL;
+		// Print a tests output if any was created
+		if($output!==''){
+			echo $output.PHP_EOL;
+		}
 	}
 	
 	/**
@@ -85,27 +129,26 @@ class RudimentaryPhpTest_Listener_Console implements RudimentaryPhpTest_Listener
 		// Print column headers
 		echo sprintf(
 			PHP_EOL
-			."\033[1m%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
+			.$this->FONT_INFORMATIVE_BOLD."%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
 			."%-${maxLengths['methodName']}s".self::SUMMARY_DELMITER_HORIZONTAL
 			."%-${maxLengths['succeeded']}s".self::SUMMARY_DELMITER_HORIZONTAL
-			."%-${maxLengths['failed']}s\033[0m"
+			."%-${maxLengths['failed']}s".$this->FONT_INFORMATIVE_NORMAL
 			.PHP_EOL,
 			$columnHeaders['className'], $columnHeaders['methodName'], $columnHeaders['succeeded'], $columnHeaders['failed']
 		);
 		
 		// Print tests along with assertion counts
-		$noColorCode = "\033[0m";
 		foreach($this->assertions as $className => $assertions){
 			foreach($assertions as $methodName => $counts){
-				$colorCodeSucceeded = $noColorCode;
-				$colorCodeFailed = $noColorCode;
+				$colorCodeSucceeded = $this->FONT_INFORMATIVE_NORMAL;
+				$colorCodeFailed = $this->FONT_INFORMATIVE_NORMAL;
 				if($counts['succeeded']>0){
 					// Print passes in green
-					$colorCodeSucceeded = "\033[0;32m";
+					$colorCodeSucceeded = $this->FONT_SUCCESS_NORMAL;
 				}
 				if($counts['failed']>0){
 					// Print failures in red
-					$colorCodeFailed = "\033[0;31m";
+					$colorCodeFailed = $this->FONT_FAILURE_NORMAL;
 				}
 				echo sprintf(
 					"%-${maxLengths['className']}s".self::SUMMARY_DELMITER_HORIZONTAL
@@ -113,7 +156,7 @@ class RudimentaryPhpTest_Listener_Console implements RudimentaryPhpTest_Listener
 					.$colorCodeSucceeded."%${maxLengths['succeeded']}s".self::SUMMARY_DELMITER_HORIZONTAL
 					.$colorCodeFailed."%${maxLengths['failed']}s"
 					.PHP_EOL,
-					$className, $methodName, $counts['succeeded'], $counts['failed']).$noColorCode;
+					$className, $methodName, $counts['succeeded'], $counts['failed']).$this->FONT_INFORMATIVE_NORMAL;
 			}
 		}
 	}

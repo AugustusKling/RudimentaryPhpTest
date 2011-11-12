@@ -39,24 +39,30 @@ interface RudimentaryPhpTest_Listener {
 	 * Called before a test is executed
 	 * @param string $className Name of the test class
 	 * @param string $methodName Name of the test method
+	 * @param string $file Path to the file that defines the test
+	 * @param integer $line Line number where the test is defined
 	 */
-	public function setUpTest($className, $methodName);
+	public function setUpTest($className, $methodName, $file, $line);
 	
 	/**
 	 * Called when a assertion within a test succeeds or the expected exception gets caught
 	 * @param string $className Name of the test class
 	 * @param string $methodName Name of the test method
+	 * @param string $file Path to the file in which the assertion was called
+	 * @param integer $line Line number where the assertion was called
 	 * @param string $message Explanation of assertion purpose
 	 */
-	public function assertionSuccess($className, $methodName, $message);
+	public function assertionSuccess($className, $methodName, $file, $line, $message);
 	
 	/**
 	 * Called when a assertion within a test fails or an unexpected exception gets caught
 	 * @param string $className Name of the test class
 	 * @param string $methodName Name of the test method
+	 * @param string $file Path to the file in which the assertion was called
+	 * @param integer $line Line number where the assertion was called
 	 * @param string $message Explanation of assertion purpose
 	 */
-	public function assertionFailure($className, $methodName, $message);
+	public function assertionFailure($className, $methodName, $file, $line, $message);
 	
 	/**
 	 * Called when an unexpected exception gets caught

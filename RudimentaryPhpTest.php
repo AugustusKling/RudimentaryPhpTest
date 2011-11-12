@@ -225,11 +225,12 @@ class RudimentaryPhpTest {
 			// See if method is a test by matching it against the filter pattern
 			mb_ereg_search_init($className.'->'.$methodName, $testfilter);
 			if(mb_ereg_search()){
-				$this->listener->setUpTest($className, $methodName);
+				$method = new ReflectionMethod($test, $methodName);
+				$this->listener->setUpTest($className, $methodName, $method->getFileName(), $method->getStartLine());
 				$test->setUp();
 				
 				// Check method comment for @expect annotations
-				$expectedException = $this->parseExpectedException($test, $methodName);
+				$expectedException = $this->parseExpectedException($method);
 				
 				$testOutput = NULL;
 				try {
@@ -241,19 +242,18 @@ class RudimentaryPhpTest {
 					if($expectedException!==NULL){
 						// Expected exception was not caught
 						$caughtAllExpectedExceptions = FALSE;
-						$this->assertionFailed($className, $methodName,
-							sprintf('Expected exception %s was not thrown', $exceptionName));
+						$this->assertionFailed(sprintf('Expected exception %s was not thrown', $exceptionName));
 					}
 				} catch(Exception $e){
 					$testOutput = ob_get_clean();
 					// Catch everything to prevent simple failures in tests from breaking test run
 					if($expectedException!==get_class($e)){
 						// Record the unexpected exception as failure
-						$this->assertionFailed($className, $methodName, 'Unexpected exception caught.');
+						$this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Unexpected exception caught.');
 						$this->listener->unexpectedException($className, $methodName, $e);
 					} else {
 						// Record catch
-						$this->assertionSucceeded($className, $methodName, 'Caught expected exception.');
+						$this->assertionSucceededInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Caught expected exception.');
 					}
 				}
 				
@@ -266,35 +266,99 @@ class RudimentaryPhpTest {
 	}
 	
 	/**
+	 * Find the call in user-supplied tests that invoked methods of the base test.
+	 * This is used to get the line of code that invoked an assertion such as assertions.
+	 * @return array Location of code that called an assertive method. Contains keys: class, method, file and index.
+	 */
+	private function getCaller(){
+		$trace = debug_backtrace();
+		$caller = NULL;
+		foreach($trace as $traceElement){
+			// Consider everything as an assertive call that is called fail or starts with assert
+			$isAssertive = $traceElement['function']==='fail' || mb_ereg('^assert.', $traceElement['function'])!==FALSE;
+			// Add first non-assertive call after an assertive call was found to allow for building user defined assertions that rely on provided assertions
+			if($caller!==NULL && !$isAssertive){
+				$caller['method'] = $traceElement['function'];
+				return $caller;
+			}
+			if(!array_key_exists('object', $traceElement)){
+				continue;
+			}
+			$reflection = new ReflectionClass($traceElement['object']);
+			// Look for assertive calls only within test code, not within code under test
+			if($reflection->isSubclassOf('RudimentaryPhpTest_BaseTest') && $isAssertive){
+				$caller = array(
+					'class' => $reflection->getName(),
+					'file' => $traceElement['file'],
+					'line' => $traceElement['line']
+				);
+			}
+		}
+		throw new Exception('Could not determine caller.');
+	}
+	
+	/**
+	 * Records a passed assertion
+	 * @param string $message Explanation of assertion purpose
+	 */
+	public function assertionSucceeded($message){
+		$caller = $this->getCaller();
+		$this->assertionSucceededInternal($caller['class'], $caller['method'], $caller['file'], $caller['line'], $message);
+	}
+	/**
 	 * Records a passed assertion
 	 * @param string $className Name of test class
 	 * @param string $methodName Name of test method
+	 * @param string $file Path to the file in which the assertion was called
+	 * @param integer $line Line number where the assertion was called
 	 * @param string $message Explanation of assertion purpose
 	 */
-	public function assertionSucceeded($className, $methodName, $message){
-		$this->listener->assertionSuccess($className, $methodName, $message);
+	private function assertionSucceededInternal($className, $methodName, $file, $line, $message){
+		// Capture test output and disable buffering so that listers' output can not be recorded as test output
+		$testOutput = ob_get_clean();
+		$this->listener->assertionSuccess($className, $methodName, $file, $line, $message);
+		// Re-enable capturing of test output
+		ob_start();
+		// Add earlier test output to new buffer
+		echo $testOutput;
+	}
+	
+	/**
+	 * Records a failed assertion
+	 * @param string $message Explanation of assertion purpose
+	 */
+	public function assertionFailed($message){
+		$caller = $this->getCaller();
+		$this->assertionFailedInternal($caller['class'], $caller['method'], $caller['file'], $caller['line'], $message);
 	}
 	
 	/**
 	 * Records a failed assertion
 	 * @param string $className Name of test class
 	 * @param string $methodName Name of test method
+	 * @param string $file Path to the file in which the assertion was called
+	 * @param integer $line Line number where the assertion was called
 	 * @param string $message Explanation of assertion purpose
 	 */
-	public function assertionFailed($className, $methodName, $message){
+	private function assertionFailedInternal($className, $methodName, $file, $line, $message){
 		$this->atLeastOneAssertionFailed = TRUE;
-		$this->listener->assertionFailure($className, $methodName, $message);
+		// Capture test output and disable buffering so that listers' output can not be recorded as test output
+		$testOutput = ob_get_clean();
+		$this->listener->assertionFailure($className, $methodName, $file, $line, $message);
+		// Re-enable capturing of test output
+		ob_start();
+		// Add earlier test output to new buffer
+		echo $testOutput;
 	}
 	
 	/**
 	 * Parse annotations from method comment since PHP does not offer annotation support.
 	 * Annotate an expected exception by @expect followed by the exception's class name.
-	 * @param string $documentation Method comment to parse
+	 * @param ReflectionMethod $method Method whose comment to parse
 	 * @return string|NULL Exception class name of exception expected to be caught
 	 */
-	private function parseExpectedException($test, $methodName){
-		$reflection = new ReflectionMethod($test, $methodName);
-		$documentation = $reflection->getDocComment();
+	private function parseExpectedException(ReflectionMethod $method){
+		$documentation = $method->getDocComment();
 		if($documentation===FALSE){
 			// There is not method comment so it can't declare an expected exception
 			return NULL;
@@ -312,6 +376,7 @@ class RudimentaryPhpTest {
 				$expectedException = $exceptionMatch[1];
 				mb_ereg_search_regs();
 			}
+			return $expectedException;
 		}
 		
 		// No @expect annotation was found

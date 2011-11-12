@@ -28,7 +28,12 @@ class SampleTest extends RudimentaryPhpTest_BaseTest {
 	 * Test comment
 	 * @expect InvalidArgumentException
 	 */
-	public function exceptionTest(){
+	public function expectedExceptionTest(){
 		throw new InvalidArgumentException();
+	}
+	
+	public function causeFailTest(){
+		// Call always records an failed assertion
+		$this->fail('Failing by intention');
 	}
 }

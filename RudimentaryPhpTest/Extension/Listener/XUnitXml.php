@@ -84,10 +84,12 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	
 	public function skippedTest($className, $methodName){}
 	
-	public function setUpTest($className, $methodName){
+	public function setUpTest($className, $methodName, $file, $line){
 	    $case = $this->log->createElement('testcase');
 	    $case->setAttribute('name', $methodName);
 	    $case->setAttribute('class', $className);
+	    $case->setAttribute('file', $file);
+	    $case->setAttribute('line', $line);
 	    $case->setAttribute('assertions', 0);
 	    $case->setAttribute('startTime', microtime(true));
 	    
@@ -97,10 +99,12 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    $this->saveLog();
 	}
 	
-	public function assertionSuccess($className, $methodName, $message){
+	public function assertionSuccess($className, $methodName, $file, $line, $message){
 	    $this->increaseCount('assertions');
 	    
 	    $success = $this->log->createElement('success');
+	    $success->setAttribute('file', $file);
+	    $success->setAttribute('line', $line);
 	    $success->appendChild($this->log->createTextNode($message));
 	    
 	    $class = $this->suite->lastChild;
@@ -109,11 +113,13 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    
 	    $this->saveLog();
 	}
-	public function assertionFailure($className, $methodName, $message){
+	public function assertionFailure($className, $methodName, $file, $line, $message){
 	    $this->increaseCount('assertions');
 	    $this->increaseCount('failures');
 	    
 	    $failure = $this->log->createElement('failure');
+	    $failure->setAttribute('file', $file);
+	    $failure->setAttribute('line', $line);
 	    $failure->appendChild($this->log->createTextNode($message));
 	    
 	    $class = $this->suite->lastChild;
@@ -145,7 +151,7 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    $this->writeTime($case);
 	    
 	    // Append captured test output (although in theory test should not create any output)
-	    $outputElement = $this->log->createElement('output');
+	    $outputElement = $this->log->createElement('system-out');
 	    $outputElement->appendChild($this->log->createTextNode($output));
 	    $case->appendChild($outputElement);
 	    

@@ -54,21 +54,21 @@ class RudimentaryPhpTest_Listener_Spreader implements RudimentaryPhpTest_Listene
 		}
 	}
 	
-	public function setUpTest($className, $methodName){
+	public function setUpTest($className, $methodName, $file, $line){
 		foreach($this->listeners as $listener){
-			$listener->setUpTest($className, $methodName);
+			$listener->setUpTest($className, $methodName, $file, $line);
 		}
 	}
 	
-	public function assertionSuccess($className, $methodName, $message){
+	public function assertionSuccess($className, $methodName, $file, $line, $message){
 		foreach($this->listeners as $listener){
-			$listener->assertionSuccess($className, $methodName, $message);
+			$listener->assertionSuccess($className, $methodName, $file, $line, $message);
 		}
 	}
 	
-	public function assertionFailure($className, $methodName, $message){
+	public function assertionFailure($className, $methodName, $file, $line, $message){
 		foreach($this->listeners as $listener){
-			$listener->assertionFailure($className, $methodName, $message);
+			$listener->assertionFailure($className, $methodName, $file, $line, $message);
 		}
 	}
 	
