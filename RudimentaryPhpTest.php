@@ -218,7 +218,8 @@ class RudimentaryPhpTest {
 	 */
 	private function runTestsOfClass($className, $testfilter){
 		// Instantiate test class
-		$test = new $className($this);
+		$test = new $className();
+		$test->setTestRunner($this);
 		// Check all method names for matching the filter
 		$allMethods = get_class_methods($test);
 		foreach($allMethods as $methodName){
@@ -274,8 +275,13 @@ class RudimentaryPhpTest {
 		$trace = debug_backtrace();
 		$caller = NULL;
 		foreach($trace as $traceElement){
+			// Ignore additional stack entries due to reflection use and own virtual methods
+			if(($traceElement['class']==='ReflectionMethod' && $traceElement['function']==='invokeArgs') || ($traceElement['class']==='RudimentaryPhpTest_BaseTest' && $traceElement['function']==='__call')){
+				continue;
+			}
+			
 			// Consider everything as an assertive call that is called fail or starts with assert
-			$isAssertive = $traceElement['function']==='fail' || mb_ereg('^assert.', $traceElement['function'])!==FALSE;
+			$isAssertive = $traceElement['function']==='fail' || mb_ereg_match('^assert.', $traceElement['function']);
 			// Add first non-assertive call after an assertive call was found to allow for building user defined assertions that rely on provided assertions
 			if($caller!==NULL && !$isAssertive){
 				$caller['method'] = $traceElement['function'];

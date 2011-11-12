@@ -1,18 +1,62 @@
 <?php
+require_once('Assertions.php');
+
 /**
  * Base for all test classes
  */
-abstract class RudimentaryPhpTest_BaseTest {
+abstract class RudimentaryPhpTest_BaseTest implements RudimentaryPhpTest_Assertions {
 	/**
 	 * @var RudimentaryPhpTest Test executor
 	 */
-	private $testRunner;
+	private $testRunner = NULL;
+	
+	/**
+	 * @var array A List of object that implement additional assertions.
+	 * This is construct is neccessary until traits are available in mainstream PHP.
+	 */
+	private $assertionProviders = array();
 	
 	/**
 	 * @param RudimentaryPhpTest $testRunner Test executor
 	 */
-	public function __construct(RudimentaryPhpTest $testRunner){
+	public function setTestRunner(RudimentaryPhpTest $testRunner){
+		if($this->testRunner!==NULL){
+			throw new Exception('Only to be used internally');
+		}
 		$this->testRunner = $testRunner;
+	}
+	
+	/**
+	 * Registers an assertion provider with the test class.
+	 * @param RudimentaryPhpTest_Assertions_Abstract $assertionProvider Implementation for assertions
+	 */
+	protected function addAssertionProvider(RudimentaryPhpTest_Assertions_Abstract $assertionProvider){
+		$this->assertionProviders[] = $assertionProvider;
+	}
+	
+	/**
+	 * Invokes an assertion that is not part of the test class but provided by an external class.
+	 * @param string $name Assertion name
+	 * @param array $arguments Assertion arguments
+	 */
+	public function __call($name, array $arguments){
+		$assertion = NULL;
+		// Search all assertion providers for an assertion with the desired name
+		foreach($this->assertionProviders as $assertionProvider){
+			$assertionProviderReflection = new ReflectionClass($assertionProvider);
+			if($assertionProviderReflection->hasMethod($name) && $assertionProviderReflection->getMethod($name)->isPublic()){
+				if($assertion!==NULL){
+					// More than one assertion provider defines an assertion with the given name
+					throw new Exception(sprintf('Assertion %s is ambiguous.', $name));
+				}
+				$assertion = $assertionProviderReflection->getMethod($name);
+			}
+		}
+		if($assertion===NULL){
+			// The assertion was not found
+			throw new Exception(sprintf('Method %s is not defined.', $name));
+		}
+		$assertion->invokeArgs($assertionProvider, $arguments);
 	}
 	
 	/**
@@ -25,9 +69,6 @@ abstract class RudimentaryPhpTest_BaseTest {
 	 */
 	public function tearDown(){}
 	
-	/**
-	 * Asserts that a condition holds
-	 */
 	public function assertTrue($actual, $message){
 		if($message===NULL){
 			$message = 'Conditon has to be true / fulfilled.';
@@ -41,12 +82,6 @@ abstract class RudimentaryPhpTest_BaseTest {
 		}
 	}
 	
-	/**
-	 * Type-safe comparison of 2 objects
-	 * @param mixed $expected Known object
-	 * @param mixed $actual Object as ocurring in test
-	 * @param string $message Description of the assertions meaning
-	 */
 	public function assertEquals($expected, $actual, $message=NULL){
 		if($message===NULL){
 			$message = 'Objects are equal in a type-safe check.';
@@ -54,12 +89,6 @@ abstract class RudimentaryPhpTest_BaseTest {
 		$this->assertTrue($expected===$actual, $message);
 	}
 	
-	/**
-	 * Comparison of 2 objects without type checking.
-	 * @param mixed $expected Known object
-	 * @param mixed $actual Object as ocurring in test
-	 * @param string $message Description of the assertions meaning
-	 */
 	public function assertEqualsLoose($expected, $actual, $message=NULL){
 		if($message===NULL){
 			$message = 'Objects are equal in a loose-typed check.';
@@ -67,10 +96,6 @@ abstract class RudimentaryPhpTest_BaseTest {
 		$this->assertTrue($expected==$actual, $message);
 	}
 	
-	/**
-	 * Records a fail
-	 * @param string $message Reason why a place should not have been reached
-	 */
 	public function fail($message=NULL){
 		if($message===NULL){
 			$message = 'This code should never have executed.';
