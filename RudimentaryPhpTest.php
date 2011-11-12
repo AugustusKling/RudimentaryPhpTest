@@ -7,6 +7,7 @@ mb_internal_encoding("UTF-8");
 mb_regex_encoding("UTF-8");
 
 // Load own dependencies
+require_once('RudimentaryPhpTest/Bootstrap.php');
 require_once('RudimentaryPhpTest/BaseTest.php');
 require_once('RudimentaryPhpTest/Listener.php');
 require_once('RudimentaryPhpTest/Listener/Console.php');
@@ -18,12 +19,11 @@ class RudimentaryPhpTest {
 	const OPTION_TESTBASE = 'testbase';
 	const OPTION_TESTFILTER = 'testfilter';
 	const OPTION_BOOTSTRAP = 'bootstrap';
-	const OPTION_LISTENER = 'listener';
 	
 	/**
 	 * @var array Default values for command line arguments
 	 */
-	private static $optionDefaults = array(
+	private $optionDefaults = array(
 		/*
 		 * Path to file or directory containing tests.
 		 * Every class that is contained and inherits from RudimentaryPhpTest_BaseTest is executed as test.
@@ -39,12 +39,7 @@ class RudimentaryPhpTest {
 		 * The so called bootstrapping code is responsible for setting up a test environment. Usually it would set up a project's class loader and include a base class for tests (that inherits from RudimentaryPhpTest_BaseTest).
 		 * The initialization code is executed exactly once before the first test is run.
 		 */
-		self::OPTION_BOOTSTRAP => NULL,
-		/*
-		 * Instance of RudimentaryPhpTest_Listener to be used instead of the default RudimentaryPhpTest_Listener_Console instance to print to the console.
-		 * Set an instance of another implementation to control logging.
-		 */
-		self::OPTION_LISTENER => NULL
+		self::OPTION_BOOTSTRAP => NULL
 	);
 	
 	/**
@@ -58,16 +53,34 @@ class RudimentaryPhpTest {
 	private $atLeastOneAssertionFailed = FALSE;
 	
 	/**
+	 * @var RudimentaryPhpTest_Bootstrap Default or user defined bootstrap code
+	 */
+	private $bootstrapImplementation;
+	
+	/**
 	 * Test runner must only be instatiated by static function performTestsAndExit
 	 */
-	private function __construct(RudimentaryPhpTest_Listener $listener){
-		$this->listener = $listener;
+	private function __construct(){
+		// Parse command line arguments to check if a bootstrap file was provided
+		$this->parseOptions();
+		
+		// Prepare environment for tests, load project defaults
+		$bootstrap = $this->bootstrap();
+		$this->bootstrapImplementation = $bootstrap;
+		foreach($bootstrap->overrideDefaultOptions() as $option => $value) {
+		    $this->overrideDefaultOption($option, $value);
+		}
+		
+		// Parse command line arguments again because bootstrap code could have overridden options
+		$this->parseOptions();
+		
+		$this->listener = $bootstrap->getListener();
 	}
 	
 	/**
 	 * Looks for options in command line arguments and updates defaults
 	 */
-	private static function parseOptions(){
+	private function parseOptions(){
 		global $argv;
 		
 		foreach($argv as $index => $token){
@@ -79,7 +92,7 @@ class RudimentaryPhpTest {
 			// Split up each option into name and value
 			if(mb_ereg('--(.*)=(.*)', $token, $argument)!==FALSE){
 				// Override default value
-				self::$optionDefaults[$argument[1]] = $argument[2];
+				$this->optionDefaults[$argument[1]] = $argument[2];
 			} else {
 				throw new Exception(sprintf('Could not parse command line argument %s', $token));
 			}
@@ -88,17 +101,15 @@ class RudimentaryPhpTest {
 	
 	/**
 	 * Overrides an option's default value.
-	 * Intended to be called from a bootstrap file to give sensible defaults. Values set with this
-	 * method do never override values that are provided as command line arguments. 
-	 * @param string $option Any of the OPTION_* constants in this class or user-defined name
+	 * @param string $option Any of the OPTION_* constants in this class or a user-defined name
 	 * @param string $value Value to use if option is not provided as command line argument.
 	 * @throws Exception
 	 */
-	public static function overrideDefaultOption($option, $value){
+	private function overrideDefaultOption($option, $value){
 	    if($option===self::OPTION_BOOTSTRAP){
 	        throw new Exception('Overriding the bootstrapping option has no effect.');
 	    }
-	    self::$optionDefaults[$option] = $value;
+	    $this->optionDefaults[$option] = $value;
 	}
 	
 	/**
@@ -106,43 +117,35 @@ class RudimentaryPhpTest {
 	 * @param string $option Name of the option
 	 * @return mixed Option value that will be used during tests
 	 */
-	public static function getOption($option){
-	    if(!array_key_exists($option, self::$optionDefaults)){
+	public function getOption($option){
+	    if(!array_key_exists($option, $this->optionDefaults)){
 	        throw new Exception(sprintf('Option %s does not exist.', $option));
 	    }
-	    return self::$optionDefaults[$option];
+	    return $this->optionDefaults[$option];
 	}
 	
 	/**
 	 * Loads tests, executes tests, prints summary and exits
 	 */
 	public static function performTestsAndExit(){
-		// Check if a bootstrap file was provided
-		self::parseOptions();
+		$testRunner = new self();
 		
-		// Prepare environment for tests
-		self::bootstrap();
-		
-		// Parse command line arguments again because bootstrap code could overridden default options
-		self::parseOptions();
-		$testbaseOption = self::getOption(self::OPTION_TESTBASE); 
+		$testbaseOption = $testRunner->getOption(self::OPTION_TESTBASE); 
 		if($testbaseOption===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
 		
-		// Create test runner instance
-		$listener = self::getOption(self::OPTION_LISTENER);
-		if($listener===NULL){
-			$listener = new RudimentaryPhpTest_Listener_Console();
-		}
-		$testRunner = new self($listener);
+		// Allow user defined bootstrap classes to initialize things
+		$testRunner->bootstrapImplementation->setUp();
 		
 		// Execute tests
 		$testbase = realpath($testbaseOption);
 		$testRunner->loadTests($testbase);
 		$testRunner->listener->setUpSuite($testbase);
-		$testRunner->runTests(self::getOption(self::OPTION_TESTFILTER));
+		$testRunner->runTests($testRunner->getOption(self::OPTION_TESTFILTER));
 		$testRunner->listener->tearDownSuite($testbase);
+		
+		$testRunner->bootstrapImplementation->tearDown();
 		
 		// Fail with error code when an assertion failed
 		$testRunner->performExit();
@@ -150,17 +153,27 @@ class RudimentaryPhpTest {
 	
 	/**
 	 * Executes the named file
+	 * @return RudimentaryPhpTest_Bootstrap Bootstrap implementation
 	 */
-	private static function bootstrap(){
-	    $file = self::getOption(self::OPTION_BOOTSTRAP);
+	private function bootstrap(){
+	    $file = $this->getOption(self::OPTION_BOOTSTRAP);
 		if($file===NULL){
-			// Run tests without initialization code since user choose not to give initialization code
-			return;
+			// Run tests with default initialization code since user choose not to give initialization code
+			return new RudimentaryPhpTest_Bootstrap($this);
 		}
 		if(!file_exists($file)){
 			throw new Exception('Could not read bootstrap file');
 		}
+		// Load user defined bootstrap class
 		require_once $file;
+		$allClasses = get_declared_classes();
+		foreach($allClasses as $className){
+		    $classReflection = new ReflectionClass($className);
+			if($classReflection->isSubclassOf('RudimentaryPhpTest_Bootstrap') && $classReflection->isInstantiable()){
+				return $classReflection->newInstance($this);
+			}
+		}
+		throw new Exception('User defined bootstrapping requested but no implementation provided');
 	}
 	
 	/**

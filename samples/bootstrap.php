@@ -12,16 +12,22 @@ function sample_autoloader($className){
 }
 spl_autoload_register('sample_autoloader', TRUE);
 
-// Another example would be to override logging to the console
-require_once('RudimentaryPhpTest/Listener/Spreader.php');
-// Override a default option. Defaults set in bootstrapping code can still be overridden by command line arguments.
-RudimentaryPhpTest::overrideDefaultOption('XUnitXml.file', 'log.xml');
-RudimentaryPhpTest::overrideDefaultOption(RudimentaryPhpTest::OPTION_LISTENER,
-	// Attach a spreader to supply multiple listeners as constructor arguments
-	new RudimentaryPhpTest_Listener_Spreader(
-		// Log to console (and append desired loggers here)
-		new RudimentaryPhpTest_Listener_Console(),
-		// Log to XML format as well
-		new RudimentaryPhpTest_Extension_Listener_XUnitXml()
-	)
-);
+// Override the default bootstrap class to control test execution. The name of your class does not matter.
+class Boot extends RudimentaryPhpTest_Bootstrap {
+	public function overrideDefaultOptions(){
+		return array(
+			RudimentaryPhpTest::OPTION_TESTBASE => realpath('../samples/tests'),
+			'XUnitXml.file' => 'log.xml'
+		);
+	}
+	
+	public function getListener(){
+		// Attach a spreader to supply multiple listeners as constructor arguments
+		return new RudimentaryPhpTest_Listener_Spreader(
+			// Log to console (and append desired loggers here)
+			new RudimentaryPhpTest_Listener_Console(),
+			// Log to XML format as well
+			new RudimentaryPhpTest_Extension_Listener_XUnitXml($this->getOption('XUnitXml.file'))
+		);
+	}
+}

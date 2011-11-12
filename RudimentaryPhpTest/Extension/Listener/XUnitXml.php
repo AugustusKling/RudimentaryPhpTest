@@ -17,45 +17,44 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
      * @var DOMElement Top-level suite
      */
     private $suite;
-    
-    /**
-     * Saves the log to a file
-     */
-    private function saveLog(){
-        $logContent = $this->log->saveXML();
-        $writeSucceeded = file_put_contents($this->filename, $logContent);
-        if($writeSucceeded===FALSE){
-            throw new Exception(sprintf('Failed to write test log to %s', realpath($this->filename)));
-        }
-    }
-    
-	public function setUpSuite($path){
-	    // Read option to know where to place the log
-	    $filename = RudimentaryPhpTest::getOption('XUnitXml.file');
+	
+	public function __construct($filename){
 	    $this->filename = $filename;
-	    
 	    $log = new DOMDocument('1.0', 'UTF-8');
 	    // Indent output
 	    $log->formatOutput = TRUE;
 	    $this->log = $log;
-	    
+		
 	    $root = $log->createElement('testsuites');
 	    $log->appendChild($root);
-	    
+		
 	    // Try to save log to find out about missing permissions early
 	    $this->saveLog();
-	    
-	    $suite = $this->log->createElement('testsuite');
-	    $suite->setAttribute('name', $path);
-	    $suite->setAttribute('tests', 0);
-	    $suite->setAttribute('assertions', 0);
-	    $suite->setAttribute('failures', 0);
-	    $suite->setAttribute('errors', 0);
-	    $suite->setAttribute('startTime', microtime(true));
-	    $this->suite = $suite;
-	    
-	    $this->log->documentElement->appendChild($suite);
-	    $this->saveLog();
+	}
+	
+	/**
+	 * Saves the log to a file
+	 */
+	private function saveLog(){
+		$logContent = $this->log->saveXML();
+		$writeSucceeded = file_put_contents($this->filename, $logContent);
+		if($writeSucceeded===FALSE){
+			throw new Exception(sprintf('Failed to write test log to %s', realpath($this->filename)));
+		}
+	}
+	
+	public function setUpSuite($path){
+		$suite = $this->log->createElement('testsuite');
+		$suite->setAttribute('name', $path);
+		$suite->setAttribute('tests', 0);
+		$suite->setAttribute('assertions', 0);
+		$suite->setAttribute('failures', 0);
+		$suite->setAttribute('errors', 0);
+		$suite->setAttribute('startTime', microtime(true));
+		$this->suite = $suite;
+		
+		$this->log->documentElement->appendChild($suite);
+		$this->saveLog();
 	}
 	
 	public function tearDownSuite($path){
