@@ -101,24 +101,14 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	public function assertionSuccess($className, $methodName, $file, $line, $message){
 	    $this->increaseCount('assertions');
 	    
-	    $success = $this->log->createElement('success');
-	    $success->setAttribute('file', $file);
-	    $success->setAttribute('line', $line);
-	    $success->appendChild($this->log->createTextNode($message));
-	    
-	    $class = $this->suite->lastChild;
-	    $case = $class->lastChild;
-	    $case->appendChild($success);
-	    
 	    $this->saveLog();
 	}
+	
 	public function assertionFailure($className, $methodName, $file, $line, $message){
 	    $this->increaseCount('assertions');
 	    $this->increaseCount('failures');
 	    
 	    $failure = $this->log->createElement('failure');
-	    $failure->setAttribute('file', $file);
-	    $failure->setAttribute('line', $line);
 	    $failure->appendChild($this->log->createTextNode($message));
 	    
 	    $class = $this->suite->lastChild;
@@ -127,10 +117,11 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    
 	    $this->saveLog();
 	}
+	
 	public function unexpectedException($className, $methodName, $exception){
 	    $this->increaseCount('errors');
 	    
-	    $error = $this->log->createElement('error');
+	    $error = $this->log->createElement('failure');
 	    $error->setAttribute('type', get_class($exception));
 	    ob_start();
 	    echo $exception;
