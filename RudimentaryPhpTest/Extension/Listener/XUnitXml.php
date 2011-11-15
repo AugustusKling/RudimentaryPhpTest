@@ -113,7 +113,10 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    
 	    $class = $this->suite->lastChild;
 	    $case = $class->lastChild;
-	    $case->appendChild($failure);
+	    // Only logging first failure since xUnit can't process more currently
+	    if(!$case->hasChildNodes()){
+    	    $case->appendChild($failure);
+	    }
 	    
 	    $this->saveLog();
 	}
