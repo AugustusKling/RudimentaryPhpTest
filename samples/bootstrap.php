@@ -25,7 +25,7 @@ class Boot extends RudimentaryPhpTest_Bootstrap {
 		// Attach a spreader to supply multiple listeners as constructor arguments
 		return new RudimentaryPhpTest_Listener_Spreader(
 			// Log to console (and append desired loggers here)
-			new RudimentaryPhpTest_Listener_Console(),
+			new RudimentaryPhpTest_Listener_Console(FALSE),
 			// Log to XML format as well
 			new RudimentaryPhpTest_Extension_Listener_XUnitXml($this->getOption('XUnitXml.file'))
 		);

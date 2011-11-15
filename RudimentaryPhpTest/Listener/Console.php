@@ -38,6 +38,18 @@ class RudimentaryPhpTest_Listener_Console implements RudimentaryPhpTest_Listener
 	 */
 	private $currentTest = NULL;
 	
+	/**
+	 * @param boolean $noColor Set TRUE to surpress colorized output
+	 */
+	public function __construct($noColor){
+	    if($noColor){
+	        $this->FONT_FAILURE_NORMAL = '';
+	        $this->FONT_INFORMATIVE_BOLD = '';
+	        $this->FONT_INFORMATIVE_NORMAL = '';
+	        $this->FONT_SUCCESS_NORMAL = '';
+	    }
+	}
+	
 	public function setUpSuite($path){
 	}
 	

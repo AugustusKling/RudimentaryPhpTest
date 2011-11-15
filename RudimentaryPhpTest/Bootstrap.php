@@ -38,7 +38,7 @@ class RudimentaryPhpTest_Bootstrap {
 	 * @return RudimentaryPhpTest_Listener_Console
 	 */
 	public function getListener(){
-		return new RudimentaryPhpTest_Listener_Console();
+		return new RudimentaryPhpTest_Listener_Console(FALSE);
 	}
 	
 	/**
