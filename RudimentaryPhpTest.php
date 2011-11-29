@@ -250,13 +250,15 @@ class RudimentaryPhpTest {
 				try {
 					// Invoke test
 					ob_start();
+					$testCallLine = __LINE__ + 1;
 					$test->$methodName();
 					$testOutput = ob_get_clean();
 					
 					if($expectedException!==NULL){
 						// Expected exception was not caught
 						$caughtAllExpectedExceptions = FALSE;
-						$this->assertionFailed(sprintf('Expected exception %s was not thrown', $exceptionName));
+						$this->assertionFailedInternal(__CLASS__, __METHOD__, __FILE__, $testCallLine,
+    						sprintf('Expected exception %s was not thrown', $exceptionName));
 					}
 				} catch(Exception $e){
 					$testOutput = ob_get_clean();
