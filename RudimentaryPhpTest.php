@@ -25,7 +25,7 @@ class RudimentaryPhpTest {
 	 */
 	private $optionDefaults = array(
 		/*
-		 * Path to file or directory containing tests.
+		 * Path to file or directory containing tests when given as string. User defined bootstrap code can also provide an iterable that contains multiple paths.
 		 * Every class that is contained and inherits from RudimentaryPhpTest_BaseTest is executed as test.
 		 */
 		self::OPTION_TESTBASE => NULL,
@@ -130,7 +130,10 @@ class RudimentaryPhpTest {
 	public static function performTestsAndExit(){
 		$testRunner = new self();
 		
-		$testbaseOption = $testRunner->getOption(self::OPTION_TESTBASE); 
+		// Fail with error code when an assertion failed
+        register_shutdown_function(array($testRunner, 'performExit'));
+		
+		$testbaseOption = $testRunner->getOption(self::OPTION_TESTBASE);
 		if($testbaseOption===NULL){
 			throw new Exception(sprintf('Option %s is missing.', self::OPTION_TESTBASE));
 		}
@@ -138,17 +141,21 @@ class RudimentaryPhpTest {
 		// Allow user defined bootstrap classes to initialize things
 		$testRunner->bootstrapImplementation->setUp();
 		
+		// Load tests
+		if(is_string($testbaseOption)){
+            $testbaseOption = array($testbaseOption);
+        }
+        foreach($testbaseOption as $testbase){
+            $testbase = realpath($testbase);
+            $testRunner->loadTests($testbase);
+        }
+        
 		// Execute tests
-		$testbase = realpath($testbaseOption);
-		$testRunner->loadTests($testbase);
 		$testRunner->listener->setUpSuite($testbase);
 		$testRunner->runTests($testRunner->getOption(self::OPTION_TESTFILTER));
 		$testRunner->listener->tearDownSuite($testbase);
 		
 		$testRunner->bootstrapImplementation->tearDown();
-		
-		// Fail with error code when an assertion failed
-		$testRunner->performExit();
 	}
 	
 	/**
@@ -407,7 +414,19 @@ class RudimentaryPhpTest {
 	/**
 	 * Kills the test runner script to be able to set an exit code
 	 */
-	private function performExit(){
+	public function performExit(){
+        // Print those errors which are fatal for PHP (stack trace is not available)
+        $error = error_get_last();
+        if($error!==NULL){
+            switch($error['type']){
+                case E_ERROR:
+                case E_PARSE:
+                case E_CORE_ERROR:
+                case E_COMPILE_ERROR:
+                    echo PHP_EOL.sprintf('Fatal error for PHP (type %d) in %s at line %d: %s', $error['type'], $error['file'], $error['line'], $error['message']);
+            }
+        }
+        
 		// Add line break so console is never messed up
 		echo PHP_EOL;
 		
