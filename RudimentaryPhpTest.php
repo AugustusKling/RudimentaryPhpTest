@@ -270,7 +270,7 @@ class RudimentaryPhpTest {
 				} catch(Exception $e){
 					$testOutput = ob_get_clean();
 					// Catch everything to prevent simple failures in tests from breaking test run
-					if($expectedException!==get_class($e)){
+					if($expectedException===NULL || !($e instanceof $expectedException)){
 						// Record the unexpected exception as failure
 						$this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Unexpected exception caught.');
 						$this->listener->unexpectedException($className, $methodName, $e);
