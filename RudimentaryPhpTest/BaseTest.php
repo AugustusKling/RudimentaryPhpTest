@@ -1,6 +1,4 @@
 <?php
-require_once('Assertions.php');
-
 /**
  * Base for all test classes
  */

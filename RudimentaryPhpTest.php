@@ -6,10 +6,8 @@ ini_set('display_errors', '1');
 mb_internal_encoding("UTF-8");
 mb_regex_encoding("UTF-8");
 
-// Load own dependencies
-require_once('RudimentaryPhpTest/Bootstrap.php');
-require_once('RudimentaryPhpTest/BaseTest.php');
-require_once('RudimentaryPhpTest/Listener.php');
+// Prepare to load own dependencies
+spl_autoload_register(array('RudimentaryPhpTest', 'autoloadClassOfRudimentaryPhpTest'));
 
 /**
  * Parses command line arguments and runs tests when instantiated
@@ -170,7 +168,7 @@ class RudimentaryPhpTest {
 			throw new Exception('Could not read bootstrap file');
 		}
 		// Load user defined bootstrap class
-		require_once $file;
+		require_once($file);
 		$allClasses = get_declared_classes();
 		foreach($allClasses as $className){
 		    $classReflection = new ReflectionClass($className);
@@ -424,18 +422,18 @@ class RudimentaryPhpTest {
 	 * Kills the test runner script to be able to set an exit code
 	 */
 	public function performExit(){
-        // Print those errors which are fatal for PHP (stack trace is not available)
-        $error = error_get_last();
-        if($error!==NULL){
-            switch($error['type']){
-                case E_ERROR:
-                case E_PARSE:
-                case E_CORE_ERROR:
-                case E_COMPILE_ERROR:
-                    echo PHP_EOL.sprintf('Fatal error for PHP (type %d) in %s at line %d: %s', $error['type'], $error['file'], $error['line'], $error['message']);
-            }
-        }
-        
+		// Print those errors which are fatal for PHP (stack trace is not available)
+		$error = error_get_last();
+		if($error!==NULL){
+			switch($error['type']){
+				case E_ERROR:
+				case E_PARSE:
+				case E_CORE_ERROR:
+				case E_COMPILE_ERROR:
+					echo PHP_EOL.sprintf('Fatal error for PHP (type %d) in %s at line %d: %s', $error['type'], $error['file'], $error['line'], $error['message']);
+			}
+		}
+		
 		// Add line break so console is never messed up
 		echo PHP_EOL;
 		
@@ -446,6 +444,19 @@ class RudimentaryPhpTest {
 		}
 		// End with success code
 		exit(0);
+	}
+	
+	/**
+	 * Tries to load files belonging to RudimentaryPhpTest and aborts the script run if it fails to do so
+	 * @param string $className Name of class that shall be defined
+	 */
+	public static function autoloadClassOfRudimentaryPhpTest($className){
+		$start = mb_substr($className, 0, mb_strlen(__CLASS__.'_'));
+		if($start===__CLASS__.'_'){
+			// One of the classes of RudimentaryPhpTest should be loaded
+			$relativePath = mb_ereg_replace('_', DIRECTORY_SEPARATOR, $className).'.php';
+			require(dirname(__FILE__).DIRECTORY_SEPARATOR.$relativePath);
+		}
 	}
 }
 
