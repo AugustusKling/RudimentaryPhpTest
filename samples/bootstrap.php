@@ -16,7 +16,7 @@ spl_autoload_register('sample_autoloader', TRUE);
 class Boot extends RudimentaryPhpTest_Bootstrap {
 	public function overrideDefaultOptions(){
 		return array(
-			RudimentaryPhpTest::OPTION_TESTBASE => realpath('../samples/tests'),
+			RudimentaryPhpTest::OPTION_TESTBASE => realpath(dirname(__FILE__).'/test'),
 			'XUnitXml.file' => 'log.xml'
 		);
 	}

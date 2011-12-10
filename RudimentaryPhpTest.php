@@ -10,7 +10,6 @@ mb_regex_encoding("UTF-8");
 require_once('RudimentaryPhpTest/Bootstrap.php');
 require_once('RudimentaryPhpTest/BaseTest.php');
 require_once('RudimentaryPhpTest/Listener.php');
-require_once('RudimentaryPhpTest/Listener/Console.php');
 
 /**
  * Parses command line arguments and runs tests when instantiated
@@ -141,19 +140,18 @@ class RudimentaryPhpTest {
 		// Allow user defined bootstrap classes to initialize things
 		$testRunner->bootstrapImplementation->setUp();
 		
-		// Load tests
 		if(is_string($testbaseOption)){
-            $testbaseOption = array($testbaseOption);
-        }
-        foreach($testbaseOption as $testbase){
-            $testbase = realpath($testbase);
-            $testRunner->loadTests($testbase);
-        }
-        
-		// Execute tests
-		$testRunner->listener->setUpSuite($testbase);
-		$testRunner->runTests($testRunner->getOption(self::OPTION_TESTFILTER));
-		$testRunner->listener->tearDownSuite($testbase);
+			$testbaseOption = array($testbaseOption);
+		}
+		foreach($testbaseOption as $testbase){
+			$testbase = realpath($testbase);
+			// Load tests
+			$testRunner->loadTests($testbase);
+			// Execute tests
+			$testRunner->listener->setUpSuite($testbase);
+			$testRunner->runTests($testbase, $testRunner->getOption(self::OPTION_TESTFILTER));
+			$testRunner->listener->tearDownSuite($testbase);
+		}
 		
 		$testRunner->bootstrapImplementation->tearDown();
 	}
@@ -215,20 +213,31 @@ class RudimentaryPhpTest {
 	
 	/**
 	 * Looks for tests in all loaded classes and executes them
+	 * @param string $testbase Path within which tests should be executed
 	 * @param string $testfilter Multi-byte regular expression that is matched against CLASS->METHOD to filter tests.
 	 */
-	private function runTests($testfilter){
+	private function runTests($testbase, $testfilter){
 		// Check all loaded classes for containing tests
 		$allClasses = get_declared_classes();
 		foreach($allClasses as $className){
 		    $classReflection = new ReflectionClass($className);
-			if($classReflection->isSubclassOf('RudimentaryPhpTest_BaseTest') && $classReflection->isInstantiable()){
+			if($classReflection->isSubclassOf('RudimentaryPhpTest_BaseTest') && $classReflection->isInstantiable() && $this->containsClass($testbase, $classReflection)){
 				// Assume all classes that inherit from RudimentaryPhpTest_BaseTest contain tests
 				$this->listener->setUpClass($className);
 				$this->runTestsOfClass($className, $testfilter);
 				$this->listener->tearDownClass($className);
 			}
 		}
+	}
+	
+	/**
+	 * Checks if a file or folder contains a class definition
+	 * @param string $testbase File or folder that might contain class
+	 * @param ReflectionClass $classReflection
+	 * @return boolean TRUE if class definition is contained
+	 */
+	private function containsClass($testbase, ReflectionClass $classReflection){
+		return mb_substr($classReflection->getFileName(), 0, mb_strlen($testbase))===$testbase;
 	}
 	
 	/**
