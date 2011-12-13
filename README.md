@@ -2,7 +2,7 @@
 
 Tests can be stored in any nested folder or a single file. The framework traverses the folder to find PHP files. If those define classes inheriting from `RudimentaryPhpTest_BaseTest` they are seen as test classes. All methods matching a filter expression are executed as tests – the default is to execute all methods whose name ends in `Test`.
 
-After the test runs complete a simple table is printed to the console which lists the tests and their assertions.
+After the test runs complete a simple summary table is printed to the console which lists the tests and their assertions.
 
 ### Requirements
 So far, this framework was developed and tested on PHP 5.3 running on Linux. It should run on any PHP 5 in theory, though.
@@ -16,7 +16,7 @@ Invocation is as follows where the parameter `testfilter` is optional and `testb
 
     php RudimentaryPhpTest.php --testbase='samples' [ --testfilter='Test$' ] [ --bootstrap='….php' ]
 
-All test classes withing the directory given by `testbase` will be executed and progress followed by a summary table will be printed.
+All test classes within the directory given by `testbase` will be executed and test progress followed by a summary table will be printed.
 
 Exit codes are as follows:
 
