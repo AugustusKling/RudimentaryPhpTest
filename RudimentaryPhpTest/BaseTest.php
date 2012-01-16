@@ -69,7 +69,7 @@ abstract class RudimentaryPhpTest_BaseTest implements RudimentaryPhpTest_Asserti
 	
 	public function assertTrue($actual, $message){
 		if($message===NULL){
-			$message = 'Conditon has to be true / fulfilled.';
+			$message = 'Condition has to be true / fulfilled.';
 		}
 		if($actual){
 			// Record success
