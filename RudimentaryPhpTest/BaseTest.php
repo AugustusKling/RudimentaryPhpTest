@@ -84,7 +84,14 @@ abstract class RudimentaryPhpTest_BaseTest implements RudimentaryPhpTest_Asserti
 		if($message===NULL){
 			$message = 'Objects are equal in a type-safe check.';
 		}
-		$this->assertTrue($expected===$actual, $message);
+		$areEqual = ($expected===$actual);
+		if (!$areEqual) {
+			$message .= sprintf("\nexpected:\n%s\n\nactual:%s\n", print_r($expected, true),
+				print_r($actual, true));
+			reset($expected);
+			reset($actual);
+		}
+		$this->assertTrue($areEqual, $message);
 	}
 	
 	public function assertEqualsLoose($expected, $actual, $message=NULL){
