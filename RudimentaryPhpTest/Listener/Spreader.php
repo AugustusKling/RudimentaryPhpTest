@@ -24,6 +24,12 @@ class RudimentaryPhpTest_Listener_Spreader implements RudimentaryPhpTest_Listene
 		}
 	}
 	
+	public function suspiciousOutput($path, $output){
+		foreach($this->listeners as $listener){
+			$listener->suspiciousOutput($path, $output);
+		}
+	}
+	
 	public function setUpSuite($path){
 		foreach($this->listeners as $listener){
 			$listener->setUpSuite($path);
@@ -60,6 +66,12 @@ class RudimentaryPhpTest_Listener_Spreader implements RudimentaryPhpTest_Listene
 		}
 	}
 	
+	public function setUpTestDone($className, $methodName, $file, $line, $output){
+		foreach($this->listeners as $listener){
+			$listener->setUpTestDone($className, $methodName, $file, $line, $output);
+		}
+	}
+	
 	public function assertionSuccess($className, $methodName, $file, $line, $message){
 		foreach($this->listeners as $listener){
 			$listener->assertionSuccess($className, $methodName, $file, $line, $message);
@@ -81,6 +93,12 @@ class RudimentaryPhpTest_Listener_Spreader implements RudimentaryPhpTest_Listene
 	public function tearDownTest($className, $methodName, $output){
 		foreach($this->listeners as $listener){
 			$listener->tearDownTest($className, $methodName, $output);
+		}
+	}
+	
+	public function tearDownTestDone($className, $methodName, $output){
+		foreach($this->listeners as $listener){
+			$listener->tearDownTestDone($className, $methodName, $output);
 		}
 	}
 }

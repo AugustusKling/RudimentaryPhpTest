@@ -43,6 +43,8 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 		}
 	}
 	
+	public function suspiciousOutput($path, $output){}
+	
 	public function setUpSuite($path){
 		$suite = $this->log->createElement('testsuite');
 		$suite->setAttribute('name', $path);
@@ -97,6 +99,8 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    
 	    $this->saveLog();
 	}
+	
+	public function setUpTestDone($className, $methodName, $file, $line, $output){}
 	
 	public function assertionSuccess($className, $methodName, $file, $line, $message){
 	    $this->increaseCount('assertions');
@@ -153,6 +157,8 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    
 	    $this->saveLog();
 	}
+	
+	public function tearDownTestDone($className, $methodName, $output){}
 	
 	/**
 	 * Removed the temporary startTime attribute and writes the duration
