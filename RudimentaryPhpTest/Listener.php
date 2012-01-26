@@ -5,6 +5,13 @@
  */
 interface RudimentaryPhpTest_Listener {
 	/**
+	 * Called when loading of a file results in output without even attempting to use the loaded code.
+	 * @param string $path Path to file which caused the output
+	 * @param string $output Captured output
+	 */
+	public function suspiciousOutput($path, $output);
+	
+	/**
 	 * Called before the first test is executed
 	 * @param string $path Absolute path to testbase
 	 */
@@ -45,6 +52,16 @@ interface RudimentaryPhpTest_Listener {
 	public function setUpTest($className, $methodName, $file, $line);
 	
 	/**
+	 * Called after setUp returned either successful or not
+	 * @param string $className Name of the test class
+	 * @param string $methodName Name of the test method
+	 * @param string $file Path to the file that defines the test
+	 * @param integer $line Line number where the test is defined
+	 * @param string $output Output captured whilst setUp was running
+	 */
+	public function setUpTestDone($className, $methodName, $file, $line, $output);
+	
+	/**
 	 * Called when a assertion within a test succeeds or the expected exception gets caught
 	 * @param string $className Name of the test class
 	 * @param string $methodName Name of the test method
@@ -79,4 +96,14 @@ interface RudimentaryPhpTest_Listener {
 	 * @param string The output created whilst the test was running
 	 */
 	public function tearDownTest($className, $methodName, $output);
+	
+	/**
+	 * Called after tearDown returned either successful or not
+	 * @param string $className Name of the test class
+	 * @param string $methodName Name of the test method
+	 * @param string $file Path to the file that defines the test
+	 * @param integer $line Line number where the test is defined
+	 * @param string $output Output captured whilst tearDown was running
+	 */
+	public function tearDownTestDone($className, $methodName, $output);
 }

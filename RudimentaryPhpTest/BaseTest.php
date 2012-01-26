@@ -63,7 +63,8 @@ abstract class RudimentaryPhpTest_BaseTest implements RudimentaryPhpTest_Asserti
 	public function setUp(){}
 	
 	/**
-	 * Called after a test is run. Typically to rollback a database transaction.
+	 * Called after a test is run or after a failed setUp invocation.
+	 * Typically to rollback a database transaction.
 	 */
 	public function tearDown(){}
 	

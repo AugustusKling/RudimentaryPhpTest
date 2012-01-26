@@ -191,7 +191,7 @@ class RudimentaryPhpTest {
 		switch($baseInfo->getType()){
 			case 'file':
 				// Load a single test class
-				require_once($testbase);
+				$this->loadTestFile($testbase);
 				break;
 			case 'dir':
 				// Walk directory recursively and load all test classes
@@ -199,13 +199,27 @@ class RudimentaryPhpTest {
 				foreach($dirIterator as $path => $info){
 					// Assume all PHP files in the given directory are tests
 					if(pathinfo($info->getFileName(), PATHINFO_EXTENSION)==='php'){
-						require_once($path);
+						$this->loadTestFile($path);
 					}
 				}
 				break;
 			default:
 				// Only files and directories are supported currently
 				throw new Exception(sprintf('%s is not a valid testbase file or directory containing testbase files', $testbase));
+		}
+	}
+	
+	/**
+	 * Loads a file and logs output if any is generated
+	 * @param {string} $path Path to file to load
+	 */
+	private function loadTestFile($path){
+		$output = NULL;
+		ob_start();
+		require_once($path);
+		$output = ob_get_clean();
+		if($output!==''){
+			$this->listener->suspiciousOutput($path, $output);
 		}
 	}
 	
@@ -254,45 +268,82 @@ class RudimentaryPhpTest {
 			mb_ereg_search_init($className.'->'.$methodName, $testfilter);
 			if(mb_ereg_search()){
 				$method = new ReflectionMethod($test, $methodName);
-				$this->listener->setUpTest($className, $methodName, $method->getFileName(), $method->getStartLine());
-				$test->setUp();
+				$testSetUpSuccessful = $this->setUpTest($test, $method);
 				
-				// Check method comment for @expect annotations
-				$expectedException = $this->parseExpectedException($method);
-				
-				$testOutput = NULL;
-				try {
-					// Invoke test
-					ob_start();
-					$testCallLine = __LINE__ + 1;
-					$test->$methodName();
-					$testOutput = ob_get_clean();
+				$testOutput = '';
+				// Skipping pointless test invocation after failed setup
+				if($testSetUpSuccessful){
+					// Check method comment for @expect annotations
+					$expectedException = $this->parseExpectedException($method);
 					
-					if($expectedException!==NULL){
-						// Expected exception was not caught
-						$caughtAllExpectedExceptions = FALSE;
-						$this->assertionFailedInternal(__CLASS__, __METHOD__, __FILE__, $testCallLine,
-    						sprintf('Expected exception %s was not thrown', $exceptionName));
-					}
-				} catch(Exception $e){
-					$testOutput = ob_get_clean();
-					// Catch everything to prevent simple failures in tests from breaking test run
-					if($expectedException===NULL || !($e instanceof $expectedException)){
-						// Record the unexpected exception as failure
-						$this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Unexpected exception caught.');
-						$this->listener->unexpectedException($className, $methodName, $e);
-					} else {
-						// Record catch
-						$this->assertionSucceededInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Caught expected exception.');
+					try {
+						// Invoke test
+						ob_start();
+						$testCallLine = __LINE__ + 1;
+						$test->$methodName();
+						$testOutput = ob_get_clean();
+						
+						if($expectedException!==NULL){
+							// Expected exception was not caught
+							$caughtAllExpectedExceptions = FALSE;
+							$this->assertionFailedInternal(__CLASS__, __METHOD__, __FILE__, $testCallLine,
+								sprintf('Expected exception %s was not thrown', $expectedException));
+						}
+					} catch(Exception $e){
+						$testOutput = ob_get_clean();
+						// Catch everything to prevent simple failures in tests from breaking test run
+						if($expectedException===NULL || !($e instanceof $expectedException)){
+							// Record the unexpected exception as failure
+							$this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Unexpected exception caught.');
+							$this->listener->unexpectedException($className, $methodName, $e);
+						} else {
+							// Record catch
+							$this->assertionSucceededInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Caught expected exception.');
+						}
 					}
 				}
 				
 				$this->listener->tearDownTest($className, $methodName, $testOutput);
-				$test->tearDown();
+				$tearDownOutput = '';
+				ob_start();
+				try {
+					$test->tearDown();
+					$tearDownOutput = ob_get_clean();
+				} catch(Exception $e) {
+					$tearDownOutput = ob_get_clean();
+				    $this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Tearing down test by calling tearDown failed.');
+				}
+				$this->listener->tearDownTestDone($className, $methodName, $tearDownOutput);
 			} else {
 				$this->listener->skippedTest($className, $methodName);
 			}
 		}
+	}
+	
+	/**
+	 * Sets up a test invocation
+	 * @param RudimentaryPhpTest_BaseTest $test Test instance for which to call setUp
+	 * @param ReflectionMethod $method Test method that is due to be run
+	 * @return boolean TRUE when calling setUp did not result in an error
+	 */
+	private function setUpTest(RudimentaryPhpTest_BaseTest $test, ReflectionMethod $method){
+		$testSetUpSuccessful = FALSE;
+		$className = $method->getDeclaringClass()->getName();
+		$methodName = $method->getName();
+		$this->listener->setUpTest($className, $methodName, $method->getFileName(), $method->getStartLine());
+		$setUpOutput = '';
+		ob_start();
+		try {
+			$test->setUp();
+			$setUpOutput = ob_get_clean();
+			$testSetUpSuccessful = TRUE;
+		} catch(Exception $e) {
+			// Capturing output here to separate setUp's output from exception logging
+			$setUpOutput = ob_get_clean();
+			$this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Setting up test by calling setUp failed.');
+		}
+		$this->listener->setUpTestDone($className, $methodName, $method->getFileName(), $method->getStartLine(), $setUpOutput);
+		return $testSetUpSuccessful;
 	}
 	
 	/**
