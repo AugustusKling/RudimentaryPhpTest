@@ -87,12 +87,41 @@ abstract class RudimentaryPhpTest_BaseTest implements RudimentaryPhpTest_Asserti
 		}
 		$areEqual = ($expected===$actual);
 		if (!$areEqual) {
-			$message .= sprintf("\nexpected:\n%s\n\nactual:%s\n", print_r($expected, true),
-				print_r($actual, true));
-			reset($expected);
-			reset($actual);
+			$message .= $this->indent(
+				sprintf(PHP_EOL.'expected (%s):%s'.PHP_EOL.'actual (%s):%s', gettype($expected), $this->varDump($expected),
+				gettype($actual), $this->varDump($actual))
+			);
 		}
 		$this->assertTrue($areEqual, $message);
+	}
+	
+	/**
+	 * @param string $string Text to be indented
+	 * @return string Text with a prepended space on each line
+	 */
+	private function indent($string){
+		return preg_replace('/^/um', ' ', $string);
+	}
+	
+	/**
+	 * Converts values to string representations
+	 * @param mixed $value Anything
+	 * @return string Serialized version of the thing
+	 */
+	private function varDump($value){
+		if(is_bool($value)){
+			// Make booleans easier to read than standard dump
+			$dumped = $value?'TRUE':'FALSE';
+		} else {
+			$dumped = print_r($value, TRUE);
+			// Trim value because some dumps have bogus line breaks attached
+			if(!is_string($value)){
+				$dumped = preg_replace('/^\\s+|\\s+$/u', '', $dumped);
+			}
+		}
+		// Indent so that strings can't be confused with other log messages
+		$dumped = $this->indent($dumped);
+		return $dumped;
 	}
 	
 	public function assertEqualsLoose($expected, $actual, $message=NULL){
