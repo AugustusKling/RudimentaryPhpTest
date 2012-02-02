@@ -5,7 +5,7 @@ Tests can be stored in any nested folder or a single file. The framework travers
 After the test runs complete a simple summary table is printed to the console which lists the tests and their assertions.
 
 ### Requirements
-So far, this framework was developed and tested on PHP 5.3 running on Linux. It should run on any PHP 5 in theory, though.
+So far, this framework was developed and tested on PHP 5.2 and PHP 5.3 running on Linux. It should run on any PHP 5 in theory, though.
 
 There are no other dependencies.
 
