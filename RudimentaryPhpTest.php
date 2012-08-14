@@ -312,6 +312,7 @@ class RudimentaryPhpTest {
 				} catch(Exception $e) {
 					$tearDownOutput = ob_get_clean();
 				    $this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Tearing down test by calling tearDown failed.');
+				    $this->listener->unexpectedException($className, $methodName, $e);
 				}
 				$this->listener->tearDownTestDone($className, $methodName, $tearDownOutput);
 			} else {
@@ -341,6 +342,7 @@ class RudimentaryPhpTest {
 			// Capturing output here to separate setUp's output from exception logging
 			$setUpOutput = ob_get_clean();
 			$this->assertionFailedInternal($className, $methodName, $e->getFile(), $e->getLine(), 'Setting up test by calling setUp failed.');
+			$this->listener->unexpectedException($className, $methodName, $e);
 		}
 		$this->listener->setUpTestDone($className, $methodName, $method->getFileName(), $method->getStartLine(), $setUpOutput);
 		return $testSetUpSuccessful;

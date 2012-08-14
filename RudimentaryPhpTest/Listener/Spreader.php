@@ -84,7 +84,7 @@ class RudimentaryPhpTest_Listener_Spreader implements RudimentaryPhpTest_Listene
 		}
 	}
 	
-	public function unexpectedException($className, $methodName, $exception){
+	public function unexpectedException($className, $methodName, Exception $exception){
 		foreach($this->listeners as $listener){
 			$listener->unexpectedException($className, $methodName, $exception);
 		}

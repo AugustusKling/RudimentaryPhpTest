@@ -85,9 +85,9 @@ interface RudimentaryPhpTest_Listener {
 	 * Called when an unexpected exception gets caught
 	 * @param string $className Name of the test class
 	 * @param string $methodName Name of the test method
-	 * @param string $message Explanation of assertion purpose
+	 * @param Exception $message Explanation of assertion purpose
 	 */
-	public function unexpectedException($className, $methodName, $exception);
+	public function unexpectedException($className, $methodName, Exception $exception);
 	
 	/**
 	 * Called after a test is executed

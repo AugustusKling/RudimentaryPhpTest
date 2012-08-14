@@ -66,11 +66,12 @@ class RudimentaryPhpTest_Listener_OutputStream implements RudimentaryPhpTest_Lis
 	}
 	
 	public function setUpSuite($path){
+        $this->assertions = array();
 	}
 	
 	public function tearDownSuite($path){
 		// Print table with test results
-		$this->printSummary();
+		$this->printSummary($path);
 	}
 	
 	public function setUpClass($className){
@@ -121,9 +122,9 @@ class RudimentaryPhpTest_Listener_OutputStream implements RudimentaryPhpTest_Lis
 		$this->increaseCounter('failed');
 	}
 	
-	public function unexpectedException($className, $methodName, $exception){
+	public function unexpectedException($className, $methodName, Exception $exception){
 		// Print all exceptions to console that are not expected to happen. Rethrowing breaks stack-trace unfortunately.
-		$this->write($exception);
+		$this->write((string)$exception);
 		$this->write(PHP_EOL);
 	}
 	
@@ -143,8 +144,15 @@ class RudimentaryPhpTest_Listener_OutputStream implements RudimentaryPhpTest_Lis
 	
 	/**
 	 * Prints a summary of passed and failed assertions
+     * @param String $path Test suite name
 	 */
-	private function printSummary(){
+	private function printSummary($path){
+        $this->write(sprintf(
+            PHP_EOL
+            .'Summary for suite: '.$this->FONT_INFORMATIVE_BOLD."%s".$this->FONT_INFORMATIVE_NORMAL,
+            $path
+        ));
+        
 		$columnHeaders = array(
 			'className' => 'Class Name',
 			'methodName' => 'Method Name',

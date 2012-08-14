@@ -125,7 +125,7 @@ class RudimentaryPhpTest_Extension_Listener_XUnitXml implements RudimentaryPhpTe
 	    $this->saveLog();
 	}
 	
-	public function unexpectedException($className, $methodName, $exception){
+	public function unexpectedException($className, $methodName, Exception $exception){
 	    $this->increaseCount('errors');
 	    
 	    $error = $this->log->createElement('failure');
